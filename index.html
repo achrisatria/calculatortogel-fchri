@@ -325,6 +325,23 @@ select option{background:#0d1829;color:var(--text1);}
 .ref-row:last-child{border-bottom:none;}
 .ref-row span:last-child{color:var(--text1);font-weight:600;}
 
+/* ── OPTGROUP DARK THEME ────────────────────── */
+optgroup{
+  background:#0d1829;
+  color:var(--accent);
+  font-style:normal;
+  font-weight:700;
+  font-size:.62rem;
+  letter-spacing:1px;
+}
+optgroup option{
+  background:#0d1829;
+  color:var(--text1);
+  font-weight:400;
+  font-size:.82rem;
+  padding-left:6px;
+}
+
 /* ── UTILITY ────────────────────────────────── */
 .mono{font-family:var(--mono);}
 .tg {color:var(--amber);}
@@ -578,7 +595,7 @@ const H = {
       "4D":{h:3000,d:0.665},"3D":{h:400,d:0.595},
       "2D":{h:70,d:0.295},"2DDP":{h:65,d:0.295},"2DTG":{h:65,d:0.295}
     },
-    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}},
     P1:{"4D":{h:6500},"3D":{h:650},"2D":{h:70}},
     P2:{"4D":{h:2100},"3D":{h:210},"2D":{h:20}},
@@ -625,7 +642,7 @@ const H = {
   // ─────────────────────────────────────────────────────
   TOTOMALI:{
     DISC:{"4D":{h:3000,d:0.67},"3D":{h:400,d:0.57},"2D":{h:70,d:0.27},"2DDP":{h:70,d:0.27},"2DTG":{h:70,d:0.27}},
-    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}}
   },
 
@@ -634,7 +651,7 @@ const H = {
   // ─────────────────────────────────────────────────────
   KK4D:{
     DISC:{"4D":{h:6000,d:0.33},"3D":{h:700,d:0.24},"2D":{h:80,d:0.15}},
-    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}}
   },
 
@@ -648,7 +665,7 @@ const H = {
   //                TT/5050/SH/KK disc 2% kei -3% (sama dengan UMUM)
   // ─────────────────────────────────────────────────────
   HOKI5D:{
-    FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     DISC:{"5D":{h:50000,d:0.38},"4D":{h:7000,d:0.20},"3D":{h:750,d:0.20},"2D":{h:75,d:0.20}},
     BB:{"5D":{t:50000,b:350},"4D":{t:5000,b:180},"3D":{t:500,b:75},"2D":{t:80,b:15}},
     // CB HokiDraw sama dgn UMUM: x1.5/x3/x4.5/x6 disc 6%
@@ -694,81 +711,128 @@ const H = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// JENIS TARUHAN PER PASARAN
-// Mapping eksak berdasarkan data H — tidak ada jenis yang
-// muncul di dropdown jika H tidak punya datanya.
+// JENIS TARUHAN PER PASARAN — dikelompokkan per kategori
+// Setiap group: { group: 'label optgroup', items: [{v, l}] }
 // ═══════════════════════════════════════════════════════════════
 function getJenis(pas){
   const P = H[pas]||H.UMUM;
+  // Format persen: 0.295 → "29,5%"
+  const pct = d => {
+    const n = +(d*100).toFixed(1);
+    return String(n===Math.round(n)?Math.round(n):n).replace('.',',')+'%';
+  };
+  // Format multiplier: 1.5 → "1,5"  3 → "3"
+  const mul = h => String(h).replace('.',',');
 
-  // ── Base 4D/3D/2D (DISC/FULL/BB) ────────────────────────────
-  // Bangun dinamis dari kunci yang BENAR-BENAR ada di H[pas].DISC
+  const groups = [];
+
+  // ── 1. DISKON ────────────────────────────────────────────────
   const discKeys = Object.keys(P.DISC||{});
-  const discItems=[];
-  // Urutan tampil: 4D > 3D > 2D > 2DDP > 2DTG > 5D (jika ada)
+  const discItems = [];
+  const discLbl = {
+    '5D':'5D Diskon',
+    '4D':'4D Diskon',
+    '3D':'3D Diskon',
+    '2D':'2D Belakang — Diskon',
+    '2DDP':'2D Depan — Diskon',
+    '2DTG':'2D Tengah — Diskon'
+  };
   ['5D','4D','3D','2D','2DDP','2DTG'].forEach(k=>{
-    if(discKeys.includes(k)){
-      const labels={
-        '5D':'5D Diskon','4D':'4D Diskon','3D':'3D Diskon',
-        '2D':'2D Belakang (Disc)','2DDP':'2D Depan (Disc)','2DTG':'2D Tengah (Disc)'
-      };
-      discItems.push({v:'DISC_'+k, l:labels[k]});
-    }
+    if(!discKeys.includes(k)) return;
+    discItems.push({v:'DISC_'+k, l: discLbl[k]});
   });
+  if(discItems.length) groups.push({group:'◆ DISKON', items: discItems});
 
+  // ── 2. FULL (tanpa diskon) ────────────────────────────────────
   const fullKeys = Object.keys(P.FULL||{});
-  const fullItems=[];
-  ['5D','4D','3D','2D'].forEach(k=>{
-    if(fullKeys.includes(k)){
-      fullItems.push({v:'FULL_'+k, l:k+' Full'});
-    }
+  const fullItems = [];
+  const fullLbl = {
+    '5D':'5D Full',
+    '4D':'4D Full',
+    '3D':'3D Full',
+    '2D':'2D Belakang — Full',
+    '2DDP':'2D Depan — Full',
+    '2DTG':'2D Tengah — Full'
+  };
+  ['5D','4D','3D','2D','2DDP','2DTG'].forEach(k=>{
+    if(!fullKeys.includes(k)) return;
+    fullItems.push({v:'FULL_'+k, l: fullLbl[k]||k+' Full'});
   });
+  if(fullItems.length) groups.push({group:'◆ FULL (tanpa diskon)', items: fullItems});
 
+  // ── 3. BOLAK-BALIK ────────────────────────────────────────────
   const bbKeys = Object.keys(P.BB||{});
-  const bbItems=[];
+  const bbItems = [];
   ['5D','4D','3D','2D'].forEach(k=>{
-    if(bbKeys.includes(k)){
-      bbItems.push(
-        {v:'BB_'+k,   l:k+' BB Tepat'},
-        {v:'BB_'+k+'_B', l:k+' BB Terbalik'}
-      );
-    }
+    if(!bbKeys.includes(k)) return;
+    bbItems.push(
+      {v:'BB_'+k,      l: k+' BB Tepat'},
+      {v:'BB_'+k+'_B', l: k+' BB Acak (tidak tepat)'}
+    );
   });
+  if(bbItems.length) groups.push({group:'◆ BOLAK-BALIK', items: bbItems});
 
-  // ── Prize (hanya jika H[pas].P1 ada) ────────────────────────
-  const prize=[];
+  // ── 4. PRIZE ─────────────────────────────────────────────────
+  const prizeItems = [];
   if(P.P1){
-    ['4D','3D','2D'].forEach(k=>{
-      if(P.P1[k]) prize.push({v:'P1_'+k, l:'Prize 1 — '+k});
-    });
-    ['4D','3D','2D'].forEach(k=>{
-      if(P.P2&&P.P2[k]) prize.push({v:'P2_'+k, l:'Prize 2 — '+k});
-    });
-    ['4D','3D','2D'].forEach(k=>{
-      if(P.P3&&P.P3[k]) prize.push({v:'P3_'+k, l:'Prize 3 — '+k});
-    });
+    ['4D','3D','2D'].forEach(k=>{ if(P.P1[k])       prizeItems.push({v:'P1_'+k, l:'Prize 1 — '+k}); });
+    ['4D','3D','2D'].forEach(k=>{ if(P.P2&&P.P2[k]) prizeItems.push({v:'P2_'+k, l:'Prize 2 — '+k}); });
+    ['4D','3D','2D'].forEach(k=>{ if(P.P3&&P.P3[k]) prizeItems.push({v:'P3_'+k, l:'Prize 3 — '+k}); });
   }
+  if(prizeItems.length) groups.push({group:'◆ PRIZE', items: prizeItems});
 
-  // ── Colok & Kei (hanya jika H[pas] punya data) ──────────────
-  const colok=[];
-  (P.CB  ||[]).forEach((c,i)=>colok.push({v:'CB_'+i,   l:c.lbl}));
-  (P.CB2D||[]).forEach((c,i)=>colok.push({v:'CB2D_'+i, l:c.lbl}));
-  (P.CB4D||[]).forEach((c,i)=>colok.push({v:'CB4D_'+i, l:c.lbl}));
-  (P.CN  ||[]).forEach((c,i)=>colok.push({v:'CN_'+i,   l:c.lbl}));
-  if(P.CJ)    colok.push({v:'CJ',   l:'Colok Jitu x8 (disc 6%)'});
-  if(P.SHIO)  colok.push({v:'SHIO', l:'Shio x9.5 (disc 5%)'});
-  if(P.KOMP)  colok.push({v:'KOMP', l:'Kombinasi x2.6 (disc 8%)'});
-  if(P.TT)    colok.push({v:'TT',   l:'Tengah/Tepi — 1:1 Kei -3%'});
-  if(P['5050']) colok.push({v:'5050',l:'50-50 — 1:1 Kei -3%'});
-  if(P.SH)    colok.push({v:'SH',   l:'Silang/Homo — 1:1 Kei -3%'});
-  if(P.KK2)   colok.push({v:'KK2',  l:'Kembang/Kempis — 1:1 Kei -3%'});
+  // ── 5. COLOK BEBAS ────────────────────────────────────────────
+  const cbItems = [];
+  (P.CB  ||[]).forEach((c,i)=>{
+    cbItems.push({v:'CB_'+i,    l:'Colok Bebas '+(i+1)+' Digit'});
+  });
+  (P.CB2D||[]).forEach((c,i)=>{
+    cbItems.push({v:'CB2D_'+i,  l:'Colok Bebas 2D — '+(i+2)+' Digit'});
+  });
+  (P.CB4D||[]).forEach((c,i)=>{
+    cbItems.push({v:'CB4D_'+i,  l:'Colok Bebas 4D — '+(i+4)+' Digit'});
+  });
+  if(cbItems.length) groups.push({group:'◆ COLOK BEBAS', items: cbItems});
+
+  // ── 6. COLOK NAGA ─────────────────────────────────────────────
+  const cnItems = [];
+  (P.CN||[]).forEach((c,i)=>{
+    cnItems.push({v:'CN_'+i, l:'Colok Naga '+(i+3)+' Digit'});
+  });
+  if(cnItems.length) groups.push({group:'◆ COLOK NAGA', items: cnItems});
+
+  // ── 7. COLOK JITU / SHIO / KOMBINASI ─────────────────────────
+  const lainItems = [];
+  if(P.CJ)   lainItems.push({v:'CJ',   l:'Colok Jitu'});
+  if(P.SHIO) lainItems.push({v:'SHIO', l:'Shio'});
+  if(P.KOMP) lainItems.push({v:'KOMP', l:'Kombinasi'});
+  if(lainItems.length) groups.push({group:'◆ COLOK JITU / SHIO / KOMBINASI', items: lainItems});
+
+  // ── 8. KEI / DASAR ────────────────────────────────────────────
+  const keiItems = [];
+  if(P.TT)      keiItems.push({v:'TT',         l:'Tengah / Tepi'});
+  if(P['5050']) keiItems.push({v:'5050',        l:'50 - 50'});
+  if(P.SH)      keiItems.push({v:'SH',          l:'Silang / Homo'});
+  if(P.KK2)     keiItems.push({v:'KK2',         l:'Kembang / Kempis'});
   if(P.DASAR){
-    colok.push({v:'DASAR_BESAR', l:'Dasar Besar/Ganjil — Kei -25%'});
-    colok.push({v:'DASAR_KECIL', l:'Dasar Kecil/Genap — Kei +10%'});
+    keiItems.push({v:'DASAR_BESAR', l:'Dasar Besar & Ganjil'});
+    keiItems.push({v:'DASAR_KECIL', l:'Dasar Kecil & Genap'});
   }
+  if(keiItems.length) groups.push({group:'◆ KEI / DASAR', items: keiItems});
 
-  return [...discItems, ...fullItems, ...bbItems, ...prize, ...colok];
+  return groups;
 }
+
+// ── renderOpts: groups → HTML string dengan <optgroup> ────────
+function renderOpts(groups){
+  return groups.map(g=>{
+    const opts = g.items.map(j=>'<option value="'+esc(j.v)+'">'+esc(j.l)+'</option>').join('');
+    return '<optgroup label="'+esc(g.group)+'">'+opts+'</optgroup>';
+  }).join('');
+}
+
+// ── flatItems: ambil semua item dari groups (untuk cek value) ─
+function flatItems(groups){ return groups.flatMap(g=>g.items); }
 
 // ═══════════════════════════════════════════════════════════════
 // CALCULATION ENGINE
@@ -795,10 +859,12 @@ function hitung(jenis, bet, pas){
   if(jenis==="DISC_2D")  return fromD("2D")||nil;
   if(jenis==="DISC_2DDP")return fromD("2DDP")||nil;
   if(jenis==="DISC_2DTG")return fromD("2DTG")||nil;
-  if(jenis==="FULL_5D")  return fromF("5D")||nil;
-  if(jenis==="FULL_4D")  return fromF("4D")||nil;
-  if(jenis==="FULL_3D")  return fromF("3D")||nil;
-  if(jenis==="FULL_2D")  return fromF("2D")||nil;
+  if(jenis==="FULL_5D")   return fromF("5D")||nil;
+  if(jenis==="FULL_4D")   return fromF("4D")||nil;
+  if(jenis==="FULL_3D")   return fromF("3D")||nil;
+  if(jenis==="FULL_2D")   return fromF("2D")||nil;
+  if(jenis==="FULL_2DDP") return fromF("2DDP")||nil;
+  if(jenis==="FULL_2DTG") return fromF("2DTG")||nil;
   if(jenis==="BB_5D")    return fromBT("5D")||nil;
   if(jenis==="BB_4D")    return fromBT("4D")||nil;
   if(jenis==="BB_3D")    return fromBT("3D")||nil;
@@ -866,8 +932,8 @@ function cocok(res,nom,jenis){
   if(jenis==="DISC_3D"||jenis==="FULL_3D"||jenis==="P1_3D"||jenis==="P2_3D"||jenis==="P3_3D") return r3===n;
   if(jenis==="BB_3D")  return r3===n;
   if(jenis==="BB_3D_B"){if(r3===n)return false;return perm(n.split('')).includes(r3);}
-  if(jenis==="DISC_2DDP") return r2dp===n;
-  if(jenis==="DISC_2DTG") return r2tg===n;
+  if(jenis==="DISC_2DDP"||jenis==="FULL_2DDP") return r2dp===n;
+  if(jenis==="DISC_2DTG"||jenis==="FULL_2DTG") return r2tg===n;
   if(jenis==="DISC_2D"||jenis==="FULL_2D"||jenis==="P1_2D"||jenis==="P2_2D"||jenis==="P3_2D") return r2===n;
   if(jenis==="BB_2D")  return r2===n;
   if(jenis==="BB_2D_B"){if(r2===n)return false;return perm(n.split('')).includes(r2);}
@@ -972,17 +1038,19 @@ const BETTING_RULES = {
   DISC_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23)'},
   FULL_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
   FULL_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
-  FULL_2D:{t:'angka',d:2,ph:'Tepat 2 digit'},
+  FULL_2D:{t:'angka',d:2,ph:'2 digit belakang (misal 34)'},
+  FULL_2DDP:{t:'angka',d:2,ph:'2 digit depan (misal 12)'},
+  FULL_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23)'},
   BB_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
   BB_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
   BB_2D:{t:'angka',d:2,ph:'Tepat 2 digit'},
-  BB_4D_B:{t:'angka',d:4,ph:'4 digit (terbalik)'},
-  BB_3D_B:{t:'angka',d:3,ph:'3 digit (terbalik)'},
-  BB_2D_B:{t:'angka',d:2,ph:'2 digit (terbalik)'},
+  BB_4D_B:{t:'angka',d:4,ph:'4 digit (tidak tepat)'},
+  BB_3D_B:{t:'angka',d:3,ph:'3 digit (tidak tepat)'},
+  BB_2D_B:{t:'angka',d:2,ph:'2 digit (tidak tepat)'},
   DISC_5D:{t:'angka',d:5,ph:'Tepat 5 digit (misal 12345)'},
   FULL_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
   BB_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
-  BB_5D_B:{t:'angka',d:5,ph:'5 digit (terbalik)'},
+  BB_5D_B:{t:'angka',d:5,ph:'5 digit (tidak tepat)'},
   P1_4D:{t:'angka',d:4,ph:'4 digit'},P1_3D:{t:'angka',d:3,ph:'3 digit'},P1_2D:{t:'angka',d:2,ph:'2 digit'},
   P2_4D:{t:'angka',d:4,ph:'4 digit'},P2_3D:{t:'angka',d:3,ph:'3 digit'},P2_2D:{t:'angka',d:2,ph:'2 digit'},
   P3_4D:{t:'angka',d:4,ph:'4 digit'},P3_3D:{t:'angka',d:3,ph:'3 digit'},P3_2D:{t:'angka',d:2,ph:'2 digit'},
@@ -1031,7 +1099,7 @@ function addRow(){
   const div=document.createElement("div");
   div.className="bet-row";
   div.id="r"+id;
-  const opts=list.map(j=>'<option value="'+esc(j.v)+'">'+esc(j.l)+'</option>').join('');
+  const opts=renderOpts(list);
   div.innerHTML=
     '<div class="row-top">'+
       '<select class="rj"></select>'+
@@ -1154,14 +1222,15 @@ function getRowPosisi(id){ const el=document.getElementById("rpos"+id); return e
 function onPasaranChange(){
   const pas=document.getElementById("inPasaran").value;
   const list=getJenis(pas);
-  const opts=list.map(j=>'<option value="'+esc(j.v)+'">'+esc(j.l)+'</option>').join('');
+  const opts=renderOpts(list);
+  const flat=flatItems(list);
   document.querySelectorAll(".bet-row").forEach(row=>{
     const rid=row.id.slice(1);
     const sel=row.querySelector(".rj");
     if(!sel)return;
     const cur=sel.value;
     sel.innerHTML=opts;
-    if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+    if(flat.some(o=>o.v===cur))sel.value=cur;
     updateRowUI(rid);
   });
 }
@@ -1529,7 +1598,7 @@ function renderRef(){
   // ── 8. BB ALL PASARAN (kecuali Hoki Draw) ───────────────────
   html += block(
     'HADIAH BOLAK BALIK ALL PASARAN — KECUALI PASARAN HOKI DRAW',
-    ['HADIAH', 'TEPAT', 'TERBALIK (BB)'],
+    ['HADIAH', 'TEPAT', 'TIDAK TEPAT (BB)'],
     [
       ['4D', 'x4.000', 'x200'],
       ['3D', 'x400',   'x100'],
@@ -1540,7 +1609,7 @@ function renderRef(){
   // ── 9. BB — HOKI DRAW 5D ────────────────────────────────────
   html += block(
     'HADIAH BOLAK BALIK KHUSUS PASARAN HOKI DRAW 5D',
-    ['HADIAH', 'TEPAT', 'TERBALIK (BB)'],
+    ['HADIAH', 'TEPAT', 'TIDAK TEPAT (BB)'],
     [
       ['5D', 'x50.000', 'x350'],
       ['4D', 'x5.000',  'x180'],
