@@ -1,3 +1,10 @@
+REPLACE_7: OK
+REPLACE_6: OK
+REPLACE_5: OK
+REPLACE_4: OK
+REPLACE_3: OK
+REPLACE_2: OK
+REPLACE_1: OK
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -411,9 +418,14 @@ function parseResult123(res){
 
 // Ambil label Prize dari jenis taruhan
 function getPrizeGrup(jenis){
+  // Jenis lama (P1_/P2_/P3_) sudah tidak dipakai di dropdown
+  // tapi tetap disupport untuk backward compat
   if(jenis.startsWith("P1_")) return "Prize 1";
   if(jenis.startsWith("P2_")) return "Prize 2";
   if(jenis.startsWith("P3_")) return "Prize 3";
+  // Jenis baru: PRIZE_4D/3D/2D — prize ditentukan saat cocok()
+  // Sini return 'PRIZE' sebagai penanda, nanti diisi cocok()
+  if(jenis.startsWith("PRIZE_")) return "PRIZE";
   return null;
 }
 
@@ -425,9 +437,9 @@ const H = {
     DISC:{"4D":{h:3000,d:0.665},"3D":{h:400,d:0.595},"2D":{h:70,d:0.295},"2DDP":{h:65,d:0.295},"2DTG":{h:65,d:0.295}},
     FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}},
-    P1:{"4D":{h:6500},"3D":{h:650},"2D":{h:70}},
-    P2:{"4D":{h:2100},"3D":{h:210},"2D":{h:20}},
-    P3:{"4D":{h:1100},"3D":{h:110},"2D":{h:8}},
+    P1:{"4D":{h:6500},"3D":{h:650},"2D":{h:70},"2DDP":{h:70},"2DTG":{h:70}},
+    P2:{"4D":{h:2100},"3D":{h:210},"2D":{h:20},"2DDP":{h:20},"2DTG":{h:20}},
+    P3:{"4D":{h:1100},"3D":{h:110},"2D":{h:8}, "2DDP":{h:8}, "2DTG":{h:8}},
     CB:[
       {lbl:"Colok Bebas (1 Digit) x1.5",h:1.5,d:0.06},
       {lbl:"Colok Bebas (2 Digit) x3",  h:3,  d:0.06},
@@ -534,9 +546,12 @@ function getJenis(pas){
 
   const prizeItems = [];
   if(P.P1){
-    ['4D','3D','2D'].forEach(k=>{ if(P.P1[k])       prizeItems.push({v:'P1_'+k,l:'Prize 1 — '+k}); });
-    ['4D','3D','2D'].forEach(k=>{ if(P.P2&&P.P2[k]) prizeItems.push({v:'P2_'+k,l:'Prize 2 — '+k}); });
-    ['4D','3D','2D'].forEach(k=>{ if(P.P3&&P.P3[k]) prizeItems.push({v:'P3_'+k,l:'Prize 3 — '+k}); });
+    // Dropdown: hanya Prize 4D/3D/2D — sistem otomatis cek P1/P2/P3
+    if(P.P1['4D'])  prizeItems.push({v:'PRIZE_4D',   l:'Prize — 4D'});
+    if(P.P1['3D'])  prizeItems.push({v:'PRIZE_3D',   l:'Prize — 3D'});
+    if(P.P1['2D'])  prizeItems.push({v:'PRIZE_2D',   l:'Prize — 2D Belakang'});
+    if(P.P1['2DDP'])prizeItems.push({v:'PRIZE_2DDP', l:'Prize — 2D Depan'});
+    if(P.P1['2DTG'])prizeItems.push({v:'PRIZE_2DTG', l:'Prize — 2D Tengah'});
   }
   if(prizeItems.length) groups.push({group:'◆ PRIZE',items:prizeItems});
 
@@ -614,15 +629,48 @@ function hitung(jenis, bet, pas){
   if(jenis==="BB_4D_B")  return fromBB("4D")||nil;
   if(jenis==="BB_3D_B")  return fromBB("3D")||nil;
   if(jenis==="BB_2D_B")  return fromBB("2D")||nil;
-  if(jenis==="P1_4D") return fromP("P1","4D")||nil;
-  if(jenis==="P1_3D") return fromP("P1","3D")||nil;
-  if(jenis==="P1_2D") return fromP("P1","2D")||nil;
-  if(jenis==="P2_4D") return fromP("P2","4D")||nil;
-  if(jenis==="P2_3D") return fromP("P2","3D")||nil;
-  if(jenis==="P2_2D") return fromP("P2","2D")||nil;
-  if(jenis==="P3_4D") return fromP("P3","4D")||nil;
-  if(jenis==="P3_3D") return fromP("P3","3D")||nil;
-  if(jenis==="P3_2D") return fromP("P3","2D")||nil;
+  // PRIZE_x: kembalikan object dengan nilai semua prize
+  // kalkulasi() akan memilih nilai yg benar berdasarkan prizeGrup dari cocok()
+  if(jenis==="PRIZE_4D") return {
+    disc:0,bayar:bet,dp:0,
+    menangP1:bet*(P.P1&&P.P1["4D"]?P.P1["4D"].h:0),
+    menangP2:bet*(P.P2&&P.P2["4D"]?P.P2["4D"].h:0),
+    menangP3:bet*(P.P3&&P.P3["4D"]?P.P3["4D"].h:0),
+    menang:bet*(P.P1&&P.P1["4D"]?P.P1["4D"].h:0), // default P1
+    isPrize:true
+  };
+  if(jenis==="PRIZE_3D") return {
+    disc:0,bayar:bet,dp:0,
+    menangP1:bet*(P.P1&&P.P1["3D"]?P.P1["3D"].h:0),
+    menangP2:bet*(P.P2&&P.P2["3D"]?P.P2["3D"].h:0),
+    menangP3:bet*(P.P3&&P.P3["3D"]?P.P3["3D"].h:0),
+    menang:bet*(P.P1&&P.P1["3D"]?P.P1["3D"].h:0),
+    isPrize:true
+  };
+  if(jenis==="PRIZE_2D") return {
+    disc:0,bayar:bet,dp:0,
+    menangP1:bet*(P.P1&&P.P1["2D"]?P.P1["2D"].h:0),
+    menangP2:bet*(P.P2&&P.P2["2D"]?P.P2["2D"].h:0),
+    menangP3:bet*(P.P3&&P.P3["2D"]?P.P3["2D"].h:0),
+    menang:bet*(P.P1&&P.P1["2D"]?P.P1["2D"].h:0),
+    isPrize:true
+  };
+  if(jenis==="PRIZE_2DDP") return {
+    disc:0,bayar:bet,dp:0,
+    menangP1:bet*(P.P1&&P.P1["2DDP"]?P.P1["2DDP"].h:0),
+    menangP2:bet*(P.P2&&P.P2["2DDP"]?P.P2["2DDP"].h:0),
+    menangP3:bet*(P.P3&&P.P3["2DDP"]?P.P3["2DDP"].h:0),
+    menang:bet*(P.P1&&P.P1["2DDP"]?P.P1["2DDP"].h:0),
+    isPrize:true
+  };
+  if(jenis==="PRIZE_2DTG") return {
+    disc:0,bayar:bet,dp:0,
+    menangP1:bet*(P.P1&&P.P1["2DTG"]?P.P1["2DTG"].h:0),
+    menangP2:bet*(P.P2&&P.P2["2DTG"]?P.P2["2DTG"].h:0),
+    menangP3:bet*(P.P3&&P.P3["2DTG"]?P.P3["2DTG"].h:0),
+    menang:bet*(P.P1&&P.P1["2DTG"]?P.P1["2DTG"].h:0),
+    isPrize:true
+  };
   if(jenis.startsWith("CB_")&&!jenis.startsWith("CB2D_")&&!jenis.startsWith("CB4D_"))
     return fromArr(P.CB,+jenis.slice(3))||nil;
   if(jenis.startsWith("CB2D_")) return fromArr(P.CB2D,+jenis.slice(5))||nil;
@@ -664,15 +712,15 @@ function cocokStandard(res, nom, jenis){
   if(jenis==="DISC_5D"||jenis==="FULL_5D") return r===n;
   if(jenis==="BB_5D")  return r===n;
   if(jenis==="BB_5D_B"){if(r===n)return false;return perm(n.split('')).includes(r);}
-  if(jenis==="DISC_4D"||jenis==="FULL_4D"||jenis==="P1_4D"||jenis==="P2_4D"||jenis==="P3_4D") return r4===n;
+  if(jenis==="DISC_4D"||jenis==="FULL_4D") return r4===n;
   if(jenis==="BB_4D")  return r4===n;
   if(jenis==="BB_4D_B"){if(r4===n)return false;return perm(n.split('')).includes(r4);}
-  if(jenis==="DISC_3D"||jenis==="FULL_3D"||jenis==="P1_3D"||jenis==="P2_3D"||jenis==="P3_3D") return r3===n;
+  if(jenis==="DISC_3D"||jenis==="FULL_3D") return r3===n;
   if(jenis==="BB_3D")  return r3===n;
   if(jenis==="BB_3D_B"){if(r3===n)return false;return perm(n.split('')).includes(r3);}
   if(jenis==="DISC_2DDP"||jenis==="FULL_2DDP") return r2dp===n;
   if(jenis==="DISC_2DTG"||jenis==="FULL_2DTG") return r2tg===n;
-  if(jenis==="DISC_2D"||jenis==="FULL_2D"||jenis==="P1_2D"||jenis==="P2_2D"||jenis==="P3_2D") return r2===n;
+  if(jenis==="DISC_2D"||jenis==="FULL_2D") return r2===n;
   if(jenis==="BB_2D")  return r2===n;
   if(jenis==="BB_2D_B"){if(r2===n)return false;return perm(n.split('')).includes(r2);}
   if(jenis.startsWith("CB_")||jenis.startsWith("CB2D_")||jenis.startsWith("CB4D_"))
@@ -698,19 +746,29 @@ function cocok(res, nom, jenis, pas){
     const {p1, p2, p3} = parsed;
     const n = nom.trim();
 
-    // ── Taruhan jenis PRIZE: cek per grup masing-masing ──────
-    if(jenis==="P1_4D") return p1 === n;
-    if(jenis==="P1_3D") return p1.slice(-3) === n;
-    if(jenis==="P1_2D") return p1.slice(-2) === n;
-    if(jenis==="P2_4D") return p2 === n;
-    if(jenis==="P2_3D") return p2.slice(-3) === n;
-    if(jenis==="P2_2D") return p2.slice(-2) === n;
-    if(jenis==="P3_4D") return p3 === n;
-    if(jenis==="P3_3D") return p3.slice(-3) === n;
-    if(jenis==="P3_2D") return p3.slice(-2) === n;
+    // ── Taruhan PRIZE_4D/3D/2D: cek P1→P2→P3, return prize tertinggi ──
+    if(jenis==="PRIZE_4D"||jenis==="PRIZE_3D"||
+       jenis==="PRIZE_2D"||jenis==="PRIZE_2DDP"||jenis==="PRIZE_2DTG"){
+      // Tentukan fungsi pencocokan sesuai jenis
+      const rl = (grp) => grp.length;
+      const chk = (grp) => {
+        if(jenis==="PRIZE_4D")  return grp === n;
+        if(jenis==="PRIZE_3D")  return grp.slice(-3) === n;
+        if(jenis==="PRIZE_2D")  return grp.slice(-2) === n;           // 2D Belakang = 2 digit terakhir
+        if(jenis==="PRIZE_2DDP")return grp.slice(0,2) === n;          // 2D Depan = 2 digit pertama
+        if(jenis==="PRIZE_2DTG"){                                      // 2D Tengah = digit ke-2 dan ke-3
+          const g=grp.length;
+          return g>=4 ? grp.slice(g-3,g-1)===n : false;
+        }
+        return false;
+      };
+      if(chk(p1)) return {cocok:true, prizeGrup:"Prize 1"};
+      if(chk(p2)) return {cocok:true, prizeGrup:"Prize 2"};
+      if(chk(p3)) return {cocok:true, prizeGrup:"Prize 3"};
+      return {cocok:false, prizeGrup:null};
+    }
 
-    // ── Taruhan NON-PRIZE: patokan = grup 1 (Prize 1) ────────
-    // Contoh: 2D Belakang → ambil 2 digit terakhir dari grup 1
+    // ── Taruhan NON-PRIZE: patokan = grup 1 (4 angka pertama) ──
     return cocokStandard(p1, nom, jenis);
   }
 
@@ -738,7 +796,9 @@ function buatPenjelasan(r, pas){
   if(is4D3D2D){
     html += '<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
     if(r.prizeGrup && isPrize123(pas)){
-      html += ' <span style="color:var(--amber);font-weight:700;">('+esc(r.prizeGrup)+')</span>';
+      const pgLabel = r.prizeGrup||'';
+      const pgColor = pgLabel==="Prize 1"?"var(--amber)":pgLabel==="Prize 2"?"var(--purple)":"var(--accent)";
+      html += ' <span style="color:'+pgColor+';font-weight:700;">('+esc(pgLabel)+')</span>';
     }
     html += '<br>';
     html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
@@ -799,9 +859,12 @@ const BETTING_RULES = {
   FULL_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
   BB_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
   BB_5D_B:{t:'angka',d:5,ph:'5 digit (tidak tepat)'},
-  P1_4D:{t:'angka',d:4,ph:'4 digit Prize 1'},P1_3D:{t:'angka',d:3,ph:'3 digit Prize 1'},P1_2D:{t:'angka',d:2,ph:'2 digit Prize 1'},
-  P2_4D:{t:'angka',d:4,ph:'4 digit Prize 2'},P2_3D:{t:'angka',d:3,ph:'3 digit Prize 2'},P2_2D:{t:'angka',d:2,ph:'2 digit Prize 2'},
-  P3_4D:{t:'angka',d:4,ph:'4 digit Prize 3'},P3_3D:{t:'angka',d:3,ph:'3 digit Prize 3'},P3_2D:{t:'angka',d:2,ph:'2 digit Prize 3'},
+  // Prize — sistem otomatis cek P1/P2/P3
+  PRIZE_4D:  {t:'angka',d:4,ph:'Tepat 4 digit — Prize 1/2/3 otomatis'},
+  PRIZE_3D:  {t:'angka',d:3,ph:'Tepat 3 digit — Prize 1/2/3 otomatis'},
+  PRIZE_2D:  {t:'angka',d:2,ph:'2 digit belakang — Prize 1/2/3 otomatis'},
+  PRIZE_2DDP:{t:'angka',d:2,ph:'2 digit depan (misal 12) — Prize 1/2/3 otomatis'},
+  PRIZE_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23) — Prize 1/2/3 otomatis'},
   CB_0:{t:'angka',d:1,ph:'1 digit saja (contoh: 5)'},
   CB_1:{t:'angka',d:2,ph:'Tepat 2 digit (contoh: 34)'},
   CB_2:{t:'angka',d:3,ph:'Tepat 3 digit (contoh: 123)'},
@@ -1050,15 +1113,33 @@ function kalkulasi(){
     const pos   = getRowPosisi(id);
     const nomDisp = rule.posisi&&pos ? nom+'@'+pos : (nom||'—');
     const c     = hitung(j, bet, pas);
-    const ok    = cocok(res, nom, j, pas);
-    const win   = ok ? Math.round(c.menang) : 0;
-    const pg    = getPrizeGrup(j);
+    // cocok() bisa return boolean (biasa) atau {cocok, prizeGrup} (Prize_x)
+    const cocokResult = cocok(res, nom, j, pas);
+    const isObj  = (typeof cocokResult === 'object' && cocokResult !== null);
+    const ok     = isObj ? cocokResult.cocok : cocokResult;
+    // Tentukan prizeGrup: dari cocok() jika Prize_x, dari getPrizeGrup jika P1_/P2_/P3_
+    let pg = isObj ? cocokResult.prizeGrup : getPrizeGrup(j);
+
+    // Hitung menang berdasarkan prize yang didapat
+    let win = 0;
+    if(ok){
+      if(c.isPrize && pg){
+        // Ambil nilai menang sesuai prize yang cocok
+        if(pg==="Prize 1")      win = Math.round(c.menangP1||c.menang);
+        else if(pg==="Prize 2") win = Math.round(c.menangP2||c.menang);
+        else if(pg==="Prize 3") win = Math.round(c.menangP3||c.menang);
+        else                      win = Math.round(c.menang);
+      } else {
+        win = Math.round(c.menang);
+      }
+    }
 
     tBet+=bet; tDisc+=c.disc; tBayar+=c.bayar; tMenang+=win;
     hasil.push({
       no:i+1, jenis:lbl, nomor:nomDisp, bet,
       disc:c.disc, bayar:c.bayar, menang:win,
-      cocok:ok, dp:c.dp, prizeGrup:pg
+      cocok:ok, dp:c.dp, prizeGrup:pg,
+      isPrize: !!c.isPrize
     });
   });
 
