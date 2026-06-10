@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Lottery Calculator Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Background */
+  --bg:#0b1221;
+  --surface:rgba(14,22,42,0.97);
+  --surface2:rgba(255,255,255,0.035);
+
+  /* Border */
+  --border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.14);
+
+  /* Accent palette — tetap konsisten, tidak berubah */
+  --accent:#4da6ff;
+  --accent-dim:rgba(77,166,255,0.1);
+  --green:#34d17a;
+  --green-dim:rgba(52,209,122,0.1);
+  --red:#fc7b7b;
+  --red-dim:rgba(252,123,123,0.08);
+  --amber:#f5a623;
+  --amber-dim:rgba(245,166,35,0.1);
+  --purple:#a78bfa;
+
+  /* Typography — ditingkatkan kontrasnya */
+  --text1:#dde4f0;        /* konten utama — lebih terang */
+  --text2:#8a9bbf;        /* label, sekunder — lebih mudah dibaca */
+  --text3:#4d5f80;        /* placeholder, hint */
+
+  /* Font */
+  --font:'Inter','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono','Cascadia Code','Courier New',monospace;
+
+  /* Radius */
+  --r:10px;--rs:7px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  background:var(--bg);
+  color:var(--text1);
+  font-family:var(--font);
+  font-size:14px;
+  line-height:1.5;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(ellipse 55% 35% at 8% 0%,rgba(77,166,255,.06) 0%,transparent 55%),
+    radial-gradient(ellipse 45% 30% at 92% 100%,rgba(167,139,250,.04) 0%,transparent 50%);
+}
+
+/* ── HEADER ─────────────────────────────────── */
+.hdr{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:13px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.hdr-logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{
+  width:32px;height:32px;
+  background:var(--accent-dim);
+  border:1px solid rgba(77,166,255,.2);
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-mark svg{width:15px;height:15px;stroke:var(--accent);fill:none;stroke-width:2;}
+.logo-txt{font-size:1rem;font-weight:600;letter-spacing:.3px;color:var(--text1);}
+.logo-sub{font-size:.65rem;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px;}
+.hdr-r{display:flex;align-items:center;gap:14px;}
+.live-dot{display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--green);letter-spacing:.5px;font-weight:500;}
+.pulse{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+#clk{font-size:.72rem;color:var(--text2);font-family:var(--mono);letter-spacing:.5px;}
+
+/* ── LAYOUT ─────────────────────────────────── */
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px;}
+.sec-lbl{
+  font-size:.65rem;text-transform:uppercase;letter-spacing:2px;
+  color:var(--text2);font-weight:600;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── STAT CARDS ─────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+@media(max-width:860px){.stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:520px){.stats{grid-template-columns:repeat(2,1fr);}}
+.sc{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:14px 16px;
+}
+.sc-bar{height:2px;border-radius:2px;margin-bottom:10px;opacity:.55;}
+.c-blue .sc-bar{background:var(--accent);}
+.c-pur  .sc-bar{background:var(--purple);}
+.c-gld  .sc-bar{background:var(--amber);}
+.c-grn  .sc-bar{background:var(--green);}
+.c-red  .sc-bar{background:var(--red);}
+.sc-lbl{
+  font-size:.64rem;text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--text2);font-weight:500;margin-bottom:5px;
+}
+.sc-val{
+  font-size:1.05rem;font-weight:700;
+  font-family:var(--mono);
+  color:var(--text1);
+  letter-spacing:.3px;
+}
+.sc-val.pos{color:var(--green);}
+.sc-val.neg{color:var(--red);}
+.sc-sub{font-size:.62rem;color:var(--text3);margin-top:3px;line-height:1.4;}
+
+/* ── MAIN GRID ──────────────────────────────── */
+.grid2{display:grid;grid-template-columns:385px 1fr;gap:16px;}
+@media(max-width:840px){.grid2{grid-template-columns:1fr;}}
+
+/* ── CARD ───────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.card-title{
+  font-size:.67rem;text-transform:uppercase;letter-spacing:1.8px;
+  color:var(--text2);font-weight:600;
+  margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);
+}
+
+/* ── FORM ───────────────────────────────────── */
+.fg{margin-bottom:13px;}
+label{
+  display:block;font-size:.64rem;text-transform:uppercase;
+  letter-spacing:1px;color:var(--text2);font-weight:500;
+  margin-bottom:5px;
+}
+input[type=text],input[type=number],select{
+  width:100%;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:var(--rs);
+  padding:9px 12px;
+  color:var(--text1);
+  font-size:.85rem;
+  line-height:1.4;
+  outline:none;
+  transition:border-color .15s;
+  font-family:var(--font);
+}
+input:focus,select:focus{border-color:var(--accent);}
+input::placeholder{color:var(--text3);}
+select option{background:#0d1829;color:var(--text1);}
+.res-inp{
+  font-family:var(--mono)!important;
+  font-size:1.6rem!important;
+  text-align:center;letter-spacing:10px;
+  color:var(--amber)!important;font-weight:700;
+}
+
+/* ── BET ROWS ───────────────────────────────── */
+.bet-hdr-lbl{
+  font-size:.62rem;text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--text3);font-weight:500;
+  padding-bottom:6px;border-bottom:1px solid var(--border);
+  margin-bottom:8px;
+}
+.bet-row{
+  margin-bottom:8px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--border);
+  border-radius:var(--rs);
+  padding:9px 10px;
+  transition:border-color .15s;
+}
+.bet-row.row-err{border-color:rgba(252,123,123,.4);}
+.bet-row.row-ok {border-color:rgba(52,209,122,.22);}
+.row-top{display:grid;grid-template-columns:1fr 88px 26px;gap:6px;align-items:center;}
+.row-mid{display:grid;gap:6px;margin-top:7px;}
+.row-mid.c2{grid-template-columns:1fr 1fr;}
+.row-mid.c1{grid-template-columns:1fr;}
+.row-mid.hide{display:none!important;}
+.row-top select,.row-top input,.row-mid select,.row-mid input{
+  padding:7px 9px;font-size:.8rem;border-radius:5px;width:100%;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  color:var(--text1);outline:none;
+  font-family:var(--font);transition:border-color .15s;
+  line-height:1.4;
+}
+.row-top select:focus,.row-top input:focus,.row-mid select:focus,.row-mid input:focus{
+  border-color:var(--accent);
+}
+.inp-lbl{
+  font-size:.6rem;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--text3);font-weight:500;margin-bottom:3px;display:block;
+}
+.hint-msg{font-size:.62rem;color:var(--text3);margin-top:3px;line-height:1.4;}
+.err-msg{
+  font-size:.65rem;color:var(--red);font-weight:500;
+  margin-top:5px;display:none;
+  padding:4px 9px;background:var(--red-dim);
+  border-radius:4px;line-height:1.4;
+}
+.err-msg.show{display:block;}
+.rm-btn{
+  width:26px;height:26px;
+  background:transparent;border:1px solid var(--border);
+  color:var(--text3);border-radius:5px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.85rem;transition:all .15s;
+}
+.rm-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+
+/* ── BUTTONS ────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 18px;border-radius:var(--rs);
+  font-size:.73rem;font-weight:600;cursor:pointer;border:none;
+  letter-spacing:.4px;text-transform:uppercase;
+  transition:opacity .15s, background .15s, border-color .15s;
+  font-family:var(--font);
+}
+.btn-ok  {background:var(--accent);color:#fff;}
+.btn-ok:hover{opacity:.88;}
+.btn-warn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text1);}
+.btn-warn:hover{border-color:var(--border2);}
+.btn-out {background:transparent;border:1px solid var(--border);color:var(--text2);}
+.btn-out:hover{border-color:var(--accent);color:var(--accent);}
+.btn-grp{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;}
+
+/* ── BREAKDOWN BOX ──────────────────────────── */
+.bdown{
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--border);
+  border-radius:var(--rs);
+  padding:13px 14px;margin-top:12px;
+  font-size:.8rem;line-height:1.5;
+}
+.bd-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);
+}
+.bd-row:last-child{border-bottom:none;}
+.bd-row.tot{
+  border-top:1px solid var(--border);
+  margin-top:4px;padding-top:8px;
+  font-weight:700;font-size:.85rem;
+}
+
+/* ── TABS ───────────────────────────────────── */
+.tabs{
+  display:flex;gap:2px;margin-bottom:14px;
+  background:rgba(0,0,0,.2);border-radius:var(--rs);padding:3px;
+}
+.tab{
+  flex:1;padding:7px 8px;background:transparent;border:none;
+  color:var(--text2);cursor:pointer;border-radius:5px;
+  font-size:.7rem;font-weight:600;letter-spacing:.4px;
+  transition:all .15s;text-transform:uppercase;font-family:var(--font);
+}
+.tab.on{background:var(--surface);color:var(--text1);border:1px solid var(--border);}
+.tab:hover:not(.on){color:var(--text1);}
+.tp-pane{display:none;}.tp-pane.on{display:block;}
+
+/* ── RESULT TABLE ───────────────────────────── */
+.rtable{width:100%;border-collapse:collapse;font-size:.78rem;}
+.rtable th{
+  background:rgba(0,0,0,.2);padding:9px 10px;text-align:left;
+  font-size:.63rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;
+  color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.rtable td{
+  padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.03);
+  line-height:1.4;vertical-align:middle;
+}
+.rtable tr:hover td{background:rgba(255,255,255,.02);}
+.rtable tr.win td{background:rgba(52,209,122,.04);}
+.rtable tr.lose td{background:rgba(252,123,123,.025);}
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:4px;
+  font-size:.62rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+}
+.bw{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,209,122,.2);}
+.bl{background:var(--red-dim);color:var(--red);border:1px solid rgba(252,123,123,.2);}
+.bt{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(77,166,255,.2);}
+
+/* ── EXPLAIN BOX ────────────────────────────── */
+.exbox{
+  font-size:.75rem;color:var(--text1);line-height:1.75;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--border);
+  border-left:2px solid var(--accent);
+  padding:10px 14px;border-radius:0 var(--rs) var(--rs) 0;
+  margin-bottom:8px;
+}
+.exbox .ef{color:var(--amber);font-family:var(--mono);font-size:.8rem;}
+.exbox .ev{color:var(--green);font-weight:600;}
+.exbox .ek{color:var(--red);}
+.exbox strong{color:var(--text1);font-weight:600;}
+
+/* ── HISTORY ────────────────────────────────── */
+.hi{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 13px;background:rgba(255,255,255,.025);
+  border:1px solid var(--border);border-radius:var(--rs);
+  margin-bottom:6px;font-size:.78rem;line-height:1.5;
+}
+.hi-res{
+  font-family:var(--mono);font-size:.9rem;color:var(--amber);
+  font-weight:700;letter-spacing:5px;
+}
+
+/* ── REFERENCE GRID (legacy, kept) ─────────── */
+.ref-card{background:rgba(255,255,255,.025);border:1px solid var(--border);
+  border-radius:var(--rs);padding:10px 12px;font-size:.73rem;}
+.ref-ttl{color:var(--accent);font-weight:600;margin-bottom:5px;
+  font-size:.64rem;text-transform:uppercase;letter-spacing:.8px;}
+.ref-row{display:flex;justify-content:space-between;color:var(--text2);padding:2px 0;
+  border-bottom:1px solid rgba(255,255,255,.03);}
+.ref-row:last-child{border-bottom:none;}
+.ref-row span:last-child{color:var(--text1);font-weight:600;}
+
+/* ── UTILITY ────────────────────────────────── */
+.mono{font-family:var(--mono);}
+.tg {color:var(--amber);}
+.tgr{color:var(--green);}
+.tr {color:var(--red);}
+.tb {color:var(--accent);}
+.tp {color:var(--purple);}
+.td {color:var(--text2);}
+.empty{text-align:center;padding:36px 20px;color:var(--text3);}
+.empty .ei{font-size:.72rem;text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:8px;display:block;font-weight:500;}
+.empty p{font-size:.76rem;line-height:1.5;}
+.twrap{overflow-x:auto;}
+@media(max-width:480px){.hdr{padding:12px 14px;}.sc-val{font-size:.95rem;}}
+
+/* ── LIST HADIAH TABLES ─────────────────────── */
+.hadiah-wrap{display:flex;flex-direction:column;gap:14px;}
+
+.htable-block{
+  border:1px solid var(--border2);
+  border-radius:var(--r);
+  overflow:hidden;
+  background:var(--surface);
+}
+
+.htable-title{
+  text-align:center;
+  padding:9px 16px;
+  font-size:.65rem;
+  font-weight:700;
+  letter-spacing:1.8px;
+  text-transform:uppercase;
+  color:var(--accent);
+  background:rgba(77,166,255,.05);
+  border-bottom:1px solid var(--border2);
+}
+
+.htable{
+  width:100%;
+  border-collapse:collapse;
+  font-size:.78rem;
+  table-layout:fixed;
+}
+
+.htable thead tr{
+  background:rgba(77,166,255,.04);
+}
+
+.htable th{
+  padding:8px 10px;
+  text-align:center;
+  font-size:.63rem;
+  font-weight:700;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--text2);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+
+.htable th:first-child,
+.htable td:first-child{
+  text-align:left;
+  padding-left:16px;
+}
+
+.htable td{
+  padding:9px 10px;
+  text-align:center;
+  color:var(--text1);
+  border-bottom:1px solid rgba(255,255,255,.035);
+  line-height:1.4;
+}
+
+.htable td:first-child{
+  color:var(--text2);
+  font-weight:500;
+  font-size:.77rem;
+}
+
+.htable tr:last-child td{border-bottom:none;}
+.htable tbody tr:hover td{background:var(--accent-dim);}
+
+.htable .hval  {color:var(--accent); font-weight:700;font-family:var(--mono);font-size:.8rem;}
+.htable .hdisc {color:var(--amber);  font-weight:600;font-family:var(--mono);font-size:.8rem;}
+.htable .hkei-neg{color:var(--red);  font-weight:600;font-family:var(--mono);font-size:.8rem;}
+.htable .hkei-pos{color:var(--green);font-weight:600;font-family:var(--mono);font-size:.8rem;}
+.htable .hnote {font-size:.7rem;color:var(--text3);}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+    </div>
+    <div>
+      <div class="logo-txt">LOTTERY CALCULATOR</div>
+      <div class="logo-sub">Settlement Dashboard</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="live-dot"><div class="pulse"></div>LIVE</div>
+    <span id="clk"></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="sec-lbl">Ringkasan Kalkulasi</div>
+  <div class="stats">
+    <div class="sc c-blue"><div class="sc-bar"></div><div class="sc-lbl">Total Bet</div><div class="sc-val mono" id="s-bet">Rp 0</div><div class="sc-sub">Modal taruhan</div></div>
+    <div class="sc c-pur"><div class="sc-bar"></div><div class="sc-lbl">Total Diskon</div><div class="sc-val mono" id="s-disc">Rp 0</div><div class="sc-sub">Potongan</div></div>
+    <div class="sc c-gld"><div class="sc-bar"></div><div class="sc-lbl">Total Bayar</div><div class="sc-val mono" id="s-bayar">Rp 0</div><div class="sc-sub">Modal keluar</div></div>
+    <div class="sc c-grn"><div class="sc-bar"></div><div class="sc-lbl">Total Menang</div><div class="sc-val mono" id="s-menang">Rp 0</div><div class="sc-sub">Jika cocok</div></div>
+    <div class="sc c-red"><div class="sc-bar"></div><div class="sc-lbl">Profit / Loss</div><div class="sc-val mono" id="s-profit">Rp 0</div><div class="sc-sub" id="s-prof-sub">Belum dihitung</div></div>
+  </div>
+
+  <div class="grid2">
+    <!-- INPUT PANEL -->
+    <div>
+      <div class="card">
+        <div class="card-title">Input Kalkulasi</div>
+        <div class="fg">
+          <label>Nomor Result</label>
+          <input type="text" id="inResult" class="res-inp" placeholder="0000" maxlength="5">
+        </div>
+        <div class="fg">
+          <label>Pasaran</label>
+          <select id="inPasaran" onchange="onPasaranChange()">
+            <option value="UMUM">— Semua Pasaran (Umum) —</option>
+            <option value="UMUM">TOTO MACAU MALAM 1</option>
+            <option value="UMUM">TOTO MACAU MALAM 2</option>
+            <option value="UMUM">TOTO MACAU MALAM 3</option>
+            <option value="UMUM">TOTO MACAU SORE</option>
+            <option value="UMUM">TOTO MACAU SIANG</option>
+            <option value="UMUM">TOTO MACAU PAGI</option>
+            <option value="TOTOMALI">TOTO MALI</option>
+            <option value="UMUM">HONGKONG LOTTO</option>
+            <option value="UMUM">SYDNEY LOTTO</option>
+            <option value="KK4D">KING KONG4D MALAM</option>
+            <option value="KK4D">KING KONG4D SORE</option>
+            <option value="UMUM">PCSO</option><option value="UMUM">MAGNUM4D</option>
+            <option value="UMUM">NEVADA</option><option value="UMUM">CHELSEA21</option>
+            <option value="UMUM">CHELSEA19</option><option value="UMUM">CHELSEA15</option>
+            <option value="UMUM">CHELSEA11</option><option value="UMUM">BULLSEYE</option>
+            <option value="UMUM">CALIFORNIA</option><option value="UMUM">BRUNEI21</option>
+            <option value="UMUM">BRUNEI14</option><option value="UMUM">BRUNEI02</option>
+            <option value="UMUM">CAROLINA EVENING</option><option value="UMUM">BANGKOK 0930</option>
+            <option value="UMUM">BANGKOK 0130</option><option value="UMUM">NEW YORK EVENING</option>
+            <option value="UMUM">NEW YORK MIDDAY</option><option value="UMUM">FLORIDA EVENING</option>
+            <option value="UMUM">FLORIDA MIDDAY</option><option value="UMUM">KENTUCKY EVENING</option>
+            <option value="UMUM">KENTUCKY MIDDAY</option><option value="UMUM">OREGON 12</option>
+            <option value="UMUM">OREGON 09</option><option value="UMUM">OREGON 06</option>
+            <option value="UMUM">OREGON 03</option><option value="UMUM">NORTH CAROLINA DAY</option>
+            <option value="UMUM">SINGAPORE</option>
+            <option value="HOKI5D">HOKI DRAW 5D</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Daftar Taruhan</label>
+          <div class="bet-hdr-lbl">Jenis · Nomor / Pilihan · Bet</div>
+          <div id="betList"></div>
+          <button class="btn btn-out" style="width:100%;margin-top:6px;" onclick="addRow()">+ Tambah Taruhan</button>
+        </div>
+        <div class="btn-grp">
+          <button class="btn btn-ok" onclick="kalkulasi()" style="flex:2;">Hitung Sekarang</button>
+          <button class="btn btn-warn" onclick="resetForm()">Reset</button>
+          <button class="btn btn-out" onclick="simpanHistory()">Simpan</button>
+        </div>
+        <div id="bdown" class="bdown" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div>
+      <div class="card">
+        <div class="tabs">
+          <button class="tab on" onclick="sw('hasil',this)">Hasil</button>
+          <button class="tab" onclick="sw('history',this)">Riwayat</button>
+          <button class="tab" onclick="sw('ref',this)">List Hadiah</button>
+        </div>
+        <div class="tp-pane on" id="tp-hasil">
+          <div class="twrap">
+            <table class="rtable">
+              <thead><tr>
+                <th>#</th><th>Jenis</th><th>Nomor</th>
+                <th>Bet</th><th>Diskon</th><th>Bayar</th>
+                <th>Menang</th><th>Status</th>
+              </tr></thead>
+              <tbody id="hasilBody">
+                <tr><td colspan="8"><div class="empty"><span class="ei">Belum ada data</span><p>Masukkan result dan taruhan, lalu klik Hitung Sekarang</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Panel penjelasan kemenangan -->
+          <div id="explainPanel" style="display:none;margin-top:16px;"></div>
+        </div>
+        <div class="tp-pane" id="tp-history">
+          <div id="histList"><div class="empty"><span class="ei">Belum ada riwayat</span></div></div>
+        </div>
+        <div class="tp-pane" id="tp-ref">
+          <div class="hadiah-wrap" id="refGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SECURITY
+// ═══════════════════════════════════════════════════════════════
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIG DATA HADIAH
+//
+// ATURAN PERHITUNGAN (STANDAR TOGEL INDONESIA):
+//
+// 1. DISKON    = Math.round(Bet × diskonPct)
+// 2. BAYAR     = Bet − Diskon
+// 3. MENANG (Hadiah Biasa) = Bet × multiplier
+//    → Hadiah selalu dari BET KOTOR, bukan dari bayar
+//    → Contoh: Bet 10.000, x1.5 → Menang = 15.000 (bukan dari 9.400)
+//
+// 4. MENANG (Kei-based) = Bayar + (Bayar × kei)
+//    → Kei adalah NET ODDS dari bandar
+//    → Kei -3%  : Menang = Bayar × 0.97 (bayar kurang 3%)
+//    → Kei +10% : Menang = Bayar × 1.10 (bayar plus 10%)
+//    → Kei -25% : Menang = Bayar × 0.75 (bayar kurang 25%)
+//
+// 5. PROFIT    = Total Menang − Total Bayar
+// ═══════════════════════════════════════════════════════════════
+
+const H = {
+
+  // ─────────────────────────────────────────────────────
+  // UMUM — Semua pasaran KECUALI KK4D, TotoMali, HokiDraw
+  //
+  // ATURAN COLOK:
+  // • CB/Colok Bebas  : hadiah × Bet, diskon 6%
+  // • CB2D            : hadiah × Bet, diskon 10%
+  // • CN/Colok Naga   : hadiah × Bet, diskon 10%
+  // • CJ/Colok Jitu   : hadiah × Bet, diskon 6%
+  // • Kei-based       : Menang = Bayar + Bayar×kei
+  //   (Tengah/Tepi, 50-50, Silang, KK, Dasar = "1 banding 1")
+  // ─────────────────────────────────────────────────────
+  UMUM: {
+    DISC:{
+      "4D":{h:3000,d:0.665},"3D":{h:400,d:0.595},
+      "2D":{h:70,d:0.295},"2DDP":{h:65,d:0.295},"2DTG":{h:65,d:0.295}
+    },
+    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}},
+    P1:{"4D":{h:6500},"3D":{h:650},"2D":{h:70}},
+    P2:{"4D":{h:2100},"3D":{h:210},"2D":{h:20}},
+    P3:{"4D":{h:1100},"3D":{h:110},"2D":{h:8}},
+    // Colok Bebas: 1/2/3/4 digit — SEMUA disc 6%
+    CB:[
+      {lbl:"Colok Bebas (1 Digit) x1.5", h:1.5, d:0.06},
+      {lbl:"Colok Bebas (2 Digit) x3",   h:3,   d:0.06},
+      {lbl:"Colok Bebas (3 Digit) x4.5", h:4.5, d:0.06},
+      {lbl:"Colok Bebas (4 Digit) x6",   h:6,   d:0.06}
+    ],
+    // Colok Bebas 2D: 2/3/4/5 digit — SEMUA disc 10%
+    CB2D:[
+      {lbl:"CB 2D (2 Digit) x7",   h:7,   d:0.10},
+      {lbl:"CB 2D (3 Digit) x11",  h:11,  d:0.10},
+      {lbl:"CB 2D (4 Digit) x18",  h:18,  d:0.10},
+      {lbl:"CB 2D (5 Digit) x200", h:200, d:0.10}
+    ],
+    // Colok Naga: 3/4/5 digit — SEMUA disc 10%
+    CN:[
+      {lbl:"Colok Naga (3 Digit) x23",  h:23,  d:0.10},
+      {lbl:"Colok Naga (4 Digit) x35",  h:35,  d:0.10},
+      {lbl:"Colok Naga (5 Digit) x125", h:125, d:0.10}
+    ],
+    CJ:  {h:8,   d:0.06},
+    SHIO:{h:9.5, d:0.05},
+    KOMP:{h:2.6, d:0.08},
+    // Kei-based — "1 banding 1": Menang = Bayar + Bayar×kei
+    TT:    {d:0.02, kei:-0.03},   // Tengah/Tepi
+    "5050":{d:0.02, kei:-0.03},   // 50-50
+    SH:    {d:0.02, kei:-0.03},   // Silang Homo
+    KK2:   {d:0.02, kei:-0.03},   // Kembang Kempis
+    // Dasar: sub-type menentukan kei
+    DASAR:{d:0.02,sub:{
+      BESAR: {kei:-0.25},  // Kei -25% → Menang = Bayar × 0.75
+      KECIL: {kei: 0.10},  // Kei +10% → Menang = Bayar × 1.10
+      GENAP: {kei: 0.10},
+      GANJIL:{kei:-0.25}
+    }}
+  },
+
+  // ─────────────────────────────────────────────────────
+  // TOTOMALI
+  // ─────────────────────────────────────────────────────
+  TOTOMALI:{
+    DISC:{"4D":{h:3000,d:0.67},"3D":{h:400,d:0.57},"2D":{h:70,d:0.27},"2DDP":{h:70,d:0.27},"2DTG":{h:70,d:0.27}},
+    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}}
+  },
+
+  // ─────────────────────────────────────────────────────
+  // KING KONG 4D
+  // ─────────────────────────────────────────────────────
+  KK4D:{
+    DISC:{"4D":{h:6000,d:0.33},"3D":{h:700,d:0.24},"2D":{h:80,d:0.15}},
+    FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}}
+  },
+
+  // ─────────────────────────────────────────────────────
+  // HOKI DRAW 5D
+  // ─────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────
+  // HOKI DRAW 5D — CB sama dengan UMUM (x1.5/x3/x4.5/x6 disc 6%)
+  //                CB2D berbeda: x4/x6/x20/x200
+  //                Tambah CB4D: x50/x200
+  //                TT/5050/SH/KK disc 2% kei -3% (sama dengan UMUM)
+  // ─────────────────────────────────────────────────────
+  HOKI5D:{
+    FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100}},
+    DISC:{"5D":{h:50000,d:0.38},"4D":{h:7000,d:0.20},"3D":{h:750,d:0.20},"2D":{h:75,d:0.20}},
+    BB:{"5D":{t:50000,b:350},"4D":{t:5000,b:180},"3D":{t:500,b:75},"2D":{t:80,b:15}},
+    // CB HokiDraw sama dgn UMUM: x1.5/x3/x4.5/x6 disc 6%
+    CB:[
+      {lbl:"Colok Bebas (1 Digit) x1.5", h:1.5, d:0.06},
+      {lbl:"Colok Bebas (2 Digit) x3",   h:3,   d:0.06},
+      {lbl:"Colok Bebas (3 Digit) x4.5", h:4.5, d:0.06},
+      {lbl:"Colok Bebas (4 Digit) x6",   h:6,   d:0.06}
+    ],
+    // CB2D HokiDraw: x4/x6/x20/x200 disc 10%
+    CB2D:[
+      {lbl:"CB 2D (2 Digit) x4",   h:4,   d:0.10},
+      {lbl:"CB 2D (3 Digit) x6",   h:6,   d:0.10},
+      {lbl:"CB 2D (4 Digit) x20",  h:20,  d:0.10},
+      {lbl:"CB 2D (5 Digit) x200", h:200, d:0.10}
+    ],
+    // CB4D HokiDraw: hanya ada di pasaran ini
+    CB4D:[
+      {lbl:"CB 4D (4 Digit) x50",  h:50,  d:0.10},
+      {lbl:"CB 4D (5 Digit) x200", h:200, d:0.10}
+    ],
+    // CN HokiDraw: x12/x30/x125 disc 10%
+    CN:[
+      {lbl:"Colok Naga (3 Digit) x12",  h:12,  d:0.10},
+      {lbl:"Colok Naga (4 Digit) x30",  h:30,  d:0.10},
+      {lbl:"Colok Naga (5 Digit) x125", h:125, d:0.10}
+    ],
+    CJ:  {h:8,   d:0.06},
+    SHIO:{h:9.5, d:0.05},
+    KOMP:{h:2.6, d:0.08},
+    // Kei-based sama dengan UMUM (kei -3%, bukan -2.2%)
+    TT:    {d:0.02, kei:-0.03},
+    "5050":{d:0.02, kei:-0.03},
+    SH:    {d:0.02, kei:-0.03},
+    KK2:   {d:0.02, kei:-0.03},
+    DASAR:{d:0.02,sub:{
+      BESAR: {kei:-0.25},
+      KECIL: {kei: 0.10},
+      GENAP: {kei: 0.10},
+      GANJIL:{kei:-0.25}
+    }}
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// JENIS TARUHAN PER PASARAN
+// Mapping eksak berdasarkan data H — tidak ada jenis yang
+// muncul di dropdown jika H tidak punya datanya.
+// ═══════════════════════════════════════════════════════════════
+function getJenis(pas){
+  const P = H[pas]||H.UMUM;
+
+  // ── Base 4D/3D/2D (DISC/FULL/BB) ────────────────────────────
+  // Bangun dinamis dari kunci yang BENAR-BENAR ada di H[pas].DISC
+  const discKeys = Object.keys(P.DISC||{});
+  const discItems=[];
+  // Urutan tampil: 4D > 3D > 2D > 2DDP > 2DTG > 5D (jika ada)
+  ['5D','4D','3D','2D','2DDP','2DTG'].forEach(k=>{
+    if(discKeys.includes(k)){
+      const labels={
+        '5D':'5D Diskon','4D':'4D Diskon','3D':'3D Diskon',
+        '2D':'2D Belakang (Disc)','2DDP':'2D Depan (Disc)','2DTG':'2D Tengah (Disc)'
+      };
+      discItems.push({v:'DISC_'+k, l:labels[k]});
+    }
+  });
+
+  const fullKeys = Object.keys(P.FULL||{});
+  const fullItems=[];
+  ['5D','4D','3D','2D'].forEach(k=>{
+    if(fullKeys.includes(k)){
+      fullItems.push({v:'FULL_'+k, l:k+' Full'});
+    }
+  });
+
+  const bbKeys = Object.keys(P.BB||{});
+  const bbItems=[];
+  ['5D','4D','3D','2D'].forEach(k=>{
+    if(bbKeys.includes(k)){
+      bbItems.push(
+        {v:'BB_'+k,   l:k+' BB Tepat'},
+        {v:'BB_'+k+'_B', l:k+' BB Terbalik'}
+      );
+    }
+  });
+
+  // ── Prize (hanya jika H[pas].P1 ada) ────────────────────────
+  const prize=[];
+  if(P.P1){
+    ['4D','3D','2D'].forEach(k=>{
+      if(P.P1[k]) prize.push({v:'P1_'+k, l:'Prize 1 — '+k});
+    });
+    ['4D','3D','2D'].forEach(k=>{
+      if(P.P2&&P.P2[k]) prize.push({v:'P2_'+k, l:'Prize 2 — '+k});
+    });
+    ['4D','3D','2D'].forEach(k=>{
+      if(P.P3&&P.P3[k]) prize.push({v:'P3_'+k, l:'Prize 3 — '+k});
+    });
+  }
+
+  // ── Colok & Kei (hanya jika H[pas] punya data) ──────────────
+  const colok=[];
+  (P.CB  ||[]).forEach((c,i)=>colok.push({v:'CB_'+i,   l:c.lbl}));
+  (P.CB2D||[]).forEach((c,i)=>colok.push({v:'CB2D_'+i, l:c.lbl}));
+  (P.CB4D||[]).forEach((c,i)=>colok.push({v:'CB4D_'+i, l:c.lbl}));
+  (P.CN  ||[]).forEach((c,i)=>colok.push({v:'CN_'+i,   l:c.lbl}));
+  if(P.CJ)    colok.push({v:'CJ',   l:'Colok Jitu x8 (disc 6%)'});
+  if(P.SHIO)  colok.push({v:'SHIO', l:'Shio x9.5 (disc 5%)'});
+  if(P.KOMP)  colok.push({v:'KOMP', l:'Kombinasi x2.6 (disc 8%)'});
+  if(P.TT)    colok.push({v:'TT',   l:'Tengah/Tepi — 1:1 Kei -3%'});
+  if(P['5050']) colok.push({v:'5050',l:'50-50 — 1:1 Kei -3%'});
+  if(P.SH)    colok.push({v:'SH',   l:'Silang/Homo — 1:1 Kei -3%'});
+  if(P.KK2)   colok.push({v:'KK2',  l:'Kembang/Kempis — 1:1 Kei -3%'});
+  if(P.DASAR){
+    colok.push({v:'DASAR_BESAR', l:'Dasar Besar/Ganjil — Kei -25%'});
+    colok.push({v:'DASAR_KECIL', l:'Dasar Kecil/Genap — Kei +10%'});
+  }
+
+  return [...discItems, ...fullItems, ...bbItems, ...prize, ...colok];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALCULATION ENGINE
+// ═══════════════════════════════════════════════════════════════
+function hitung(jenis, bet, pas){
+  const P = H[pas]||H.UMUM;
+  const dk = pct => Math.round(bet*pct);
+  const fromD = k=>{const x=(P.DISC||{})[k];if(!x)return null;const d=dk(x.d||0);return{disc:d,bayar:bet-d,menang:bet*x.h,dp:x.d||0};};
+  const fromF = k=>{const x=(P.FULL||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.h,dp:0};};
+  const fromBT= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.t,dp:0};};
+  const fromBB= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.b,dp:0};};
+  const fromP = (g,k)=>{const x=(P[g]||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.h,dp:0};};
+  // COLOK: Menang = Bayar (modal kembali) + (Bet × hadiah)
+  // Rumus referensi: (Bet − Disc) + (Bet × multiplier)
+  const fromArr=(arr,i)=>{const x=(arr||[])[i];if(!x)return null;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};};
+  // KEI-BASED: Menang = Bet (dikembalikan) + (Bet−Disc) ± Kei
+  // Rumus referensi: Bet + (Bet − Disc) + Kei
+  const fromKei=cfg=>{const d=dk(cfg.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(bet+b+(b*(cfg.kei||0))),dp:cfg.d||0};};
+  const nil={disc:0,bayar:bet,menang:0,dp:0};
+
+  if(jenis==="DISC_5D")  return fromD("5D")||nil;
+  if(jenis==="DISC_4D")  return fromD("4D")||nil;
+  if(jenis==="DISC_3D")  return fromD("3D")||nil;
+  if(jenis==="DISC_2D")  return fromD("2D")||nil;
+  if(jenis==="DISC_2DDP")return fromD("2DDP")||nil;
+  if(jenis==="DISC_2DTG")return fromD("2DTG")||nil;
+  if(jenis==="FULL_5D")  return fromF("5D")||nil;
+  if(jenis==="FULL_4D")  return fromF("4D")||nil;
+  if(jenis==="FULL_3D")  return fromF("3D")||nil;
+  if(jenis==="FULL_2D")  return fromF("2D")||nil;
+  if(jenis==="BB_5D")    return fromBT("5D")||nil;
+  if(jenis==="BB_4D")    return fromBT("4D")||nil;
+  if(jenis==="BB_3D")    return fromBT("3D")||nil;
+  if(jenis==="BB_2D")    return fromBT("2D")||nil;
+  if(jenis==="BB_5D_B")  return fromBB("5D")||nil;
+  if(jenis==="BB_4D_B")  return fromBB("4D")||nil;
+  if(jenis==="BB_3D_B")  return fromBB("3D")||nil;
+  if(jenis==="BB_2D_B")  return fromBB("2D")||nil;
+  if(jenis==="P1_4D") return fromP("P1","4D")||nil;
+  if(jenis==="P1_3D") return fromP("P1","3D")||nil;
+  if(jenis==="P1_2D") return fromP("P1","2D")||nil;
+  if(jenis==="P2_4D") return fromP("P2","4D")||nil;
+  if(jenis==="P2_3D") return fromP("P2","3D")||nil;
+  if(jenis==="P2_2D") return fromP("P2","2D")||nil;
+  if(jenis==="P3_4D") return fromP("P3","4D")||nil;
+  if(jenis==="P3_3D") return fromP("P3","3D")||nil;
+  if(jenis==="P3_2D") return fromP("P3","2D")||nil;
+
+  if(jenis.startsWith("CB_")&&!jenis.startsWith("CB2D_")&&!jenis.startsWith("CB4D_"))
+    return fromArr(P.CB,+jenis.slice(3))||nil;
+  if(jenis.startsWith("CB2D_")) return fromArr(P.CB2D,+jenis.slice(5))||nil;
+  if(jenis.startsWith("CB4D_")) return fromArr(P.CB4D,+jenis.slice(5))||nil;
+  if(jenis.startsWith("CN_"))   return fromArr(P.CN,  +jenis.slice(3))||nil;
+
+  // CJ/SHIO/KOMP: sama dengan colok — Menang = Bayar + (Bet × hadiah)
+  if(jenis==="CJ")  {const x=P.CJ;  if(!x)return nil;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="SHIO"){const x=P.SHIO;if(!x)return nil;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="KOMP"){const x=P.KOMP;if(!x)return nil;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="TT")   return P.TT    ?fromKei(P.TT)   :nil;
+  if(jenis==="5050") return P["5050"]?fromKei(P["5050"]):nil;
+  if(jenis==="SH")   return P.SH    ?fromKei(P.SH)   :nil;
+  if(jenis==="KK2")  return P.KK2   ?fromKei(P.KK2)  :nil;
+  if(jenis.startsWith("DASAR_")){
+    const sub=jenis.slice(6);
+    const D=P.DASAR; if(!D)return nil;
+    const kei=(D.sub[sub]||{}).kei||0;
+    return fromKei({d:D.d,kei});
+  }
+  return nil;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MATCH ENGINE
+// ═══════════════════════════════════════════════════════════════
+function perm(arr){
+  if(arr.length<=1)return[arr.join('')];
+  const r=[];
+  arr.forEach((c,i)=>{const s=[...arr.slice(0,i),...arr.slice(i+1)];perm(s).forEach(p=>r.push(c+p));});
+  return[...new Set(r)];
+}
+
+function cocok(res,nom,jenis){
+  const r=res.trim(), n=nom.trim();
+  if(!n)return false;
+  const rl=r.length;
+  const r2=r.slice(-2),r3=r.slice(-3),r4=r.slice(-4);
+  const r2dp=r.slice(0,2);
+  const r2tg=rl>=4?r.slice(rl-3,rl-1):"";
+  if(jenis==="DISC_5D"||jenis==="FULL_5D") return r===n;
+  if(jenis==="BB_5D")  return r===n;
+  if(jenis==="BB_5D_B"){if(r===n)return false;return perm(n.split('')).includes(r);}
+  if(jenis==="DISC_4D"||jenis==="FULL_4D"||jenis==="P1_4D"||jenis==="P2_4D"||jenis==="P3_4D") return r4===n;
+  if(jenis==="BB_4D")  return r4===n;
+  if(jenis==="BB_4D_B"){if(r4===n)return false;return perm(n.split('')).includes(r4);}
+  if(jenis==="DISC_3D"||jenis==="FULL_3D"||jenis==="P1_3D"||jenis==="P2_3D"||jenis==="P3_3D") return r3===n;
+  if(jenis==="BB_3D")  return r3===n;
+  if(jenis==="BB_3D_B"){if(r3===n)return false;return perm(n.split('')).includes(r3);}
+  if(jenis==="DISC_2DDP") return r2dp===n;
+  if(jenis==="DISC_2DTG") return r2tg===n;
+  if(jenis==="DISC_2D"||jenis==="FULL_2D"||jenis==="P1_2D"||jenis==="P2_2D"||jenis==="P3_2D") return r2===n;
+  if(jenis==="BB_2D")  return r2===n;
+  if(jenis==="BB_2D_B"){if(r2===n)return false;return perm(n.split('')).includes(r2);}
+  if(jenis.startsWith("CB_")||jenis.startsWith("CB2D_")||jenis.startsWith("CB4D_"))
+    return n.split('').every(c=>r.includes(c));
+  if(jenis.startsWith("CN_")) return n.split('').every(c=>r.includes(c));
+  if(jenis==="CJ") return r.includes(n);
+  if(jenis==="KOMP") return n.length > 0; // kombinasi wajib ada nomor
+  // SHIO/Kei = user tentukan, selalu true
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PENJELASAN KEMENANGAN — gaya CS togel, ramah member
+// ═══════════════════════════════════════════════════════════════
+function buatPenjelasan(r){
+  const bet=r.bet, disc=r.disc, bayar=r.bayar, dp=r.dp, jenis=r.jenis, menang=r.menang;
+  const fmtN=n=>Math.round(n).toLocaleString('id-ID');
+
+  // Tentukan tipe taruhan
+  const is4D3D2D = ["4D","3D","2D","BB","Full","Prize","DISC","FULL"].some(k=>jenis.includes(k));
+  const isKei    = ["Tengah/Tepi","50-50","Silang","Kembang","Dasar"].some(k=>jenis.includes(k));
+  const isColok  = !is4D3D2D && !isKei; // CB, CN, CJ, SHIO, KOMP
+
+  // Diskon pct string (misal "5%")
+  const discPctStr = fmtPct(dp);
+
+  // Multiplier untuk colok/shio — dihitung dari selisih menang dan bayar terhadap bet
+  // Rumus: menang = bayar + (bet × m) → m = (menang - bayar) / bet
+  const multiColok = ((menang - bayar) / bet);
+  const multiStr   = multiColok % 1 === 0
+    ? multiColok.toFixed(0)
+    : multiColok.toFixed(2).replace(/\.?0+$/,'');
+
+  // Untuk 4D/3D/2D: menang = bet × m → m = menang / bet
+  const multi4D    = menang / bet;
+  const multi4DStr = multi4D % 1 === 0
+    ? multi4D.toFixed(0)
+    : multi4D.toFixed(1).replace(/\.0$/,'');
+
+  let html = '<div class="exbox">';
+
+  if(is4D3D2D){
+    // ── 4D / 3D / 2D / BB / Full / Prize ──────────────────────
+    // Menang = Bet × multiplier (bet TIDAK dikembalikan)
+    html += '<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
+    html += '<br>';
+    html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
+    html += '<br>';
+    html += '• Rumus: Bet × hadiah &nbsp;= Rp <span class="ef">'+fmtN(bet)+'</span> × <span class="ef">'+multi4DStr+'×</span> = <span class="ev">Rp '+fmtN(menang)+'</span>';
+    html += '<br>';
+    html += '• Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
+
+  } else if(isKei){
+    // ── KEI-BASED: Tengah/Tepi, 50-50, Silang, Kembang, Dasar ──
+    // Menang = Bet (kembali) + Bayar ± Kei
+    const keiAmt   = menang - bet - bayar; // kei dalam Rupiah (negatif = potongan)
+    const keiSign  = keiAmt >= 0 ? '+' : '';
+    const keiPctStr= keiSign + (keiAmt/bayar*100).toFixed(1)+'%';
+
+    html += '<strong>'+esc(jenis)+'</strong> — Pilihan <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
+    html += '<br>';
+    html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
+    html += '<br>';
+    html += '• Rumus: Bet kembali + Bayar '+keiSign+'Kei';
+    html += ' &nbsp;= Rp <span class="ef">'+fmtN(bet)+'</span> + Rp <span class="ef">'+fmtN(bayar)+'</span>';
+    html += ' <span class="'+(keiAmt>=0?'ev':'ek')+'">'+keiSign+'Rp '+fmtN(Math.abs(keiAmt))+'</span>';
+    html += ' = <span class="ev">Rp '+fmtN(menang)+'</span>';
+    html += '<br>';
+    html += '• Profit bersih: <span class="'+(menang-bayar>=0?'ev':'ek')+'">'+(menang-bayar>=0?'+':'')+' Rp '+fmtN(menang-bayar)+'</span>';
+
+  } else {
+    // ── COLOK / SHIO / KOMBINASI ──────────────────────────────
+    // Menang = Bayar (kembali) + (Bet × multiplier)
+    const hadiahMurni = Math.round(bet * multiColok);
+
+    html += '<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
+    html += '<br>';
+    html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
+    html += '<br>';
+    html += '• Rumus: Bayar kembali + (Bet × hadiah)';
+    html += ' &nbsp;= Rp <span class="ef">'+fmtN(bayar)+'</span> + (Rp <span class="ef">'+fmtN(bet)+'</span> × <span class="ef">'+multiStr+'×</span>)';
+    html += ' = <span class="ev">Rp '+fmtN(menang)+'</span>';
+    html += '<br>';
+    html += '• Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BETTING_RULES — Config validasi per jenis taruhan
+// Untuk menambah jenis baru: cukup tambah entry di sini
+// t: 'angka'|'dropdown'|'none'  d: jumlah digit wajib
+// ═══════════════════════════════════════════════════════════════
+const BETTING_RULES = {
+  DISC_4D:{t:'angka',d:4,ph:'Tepat 4 digit (misal 1234)'},
+  DISC_3D:{t:'angka',d:3,ph:'Tepat 3 digit (misal 234)'},
+  DISC_2D:{t:'angka',d:2,ph:'2 digit belakang (misal 34)'},
+  DISC_2DDP:{t:'angka',d:2,ph:'2 digit depan (misal 12)'},
+  DISC_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23)'},
+  FULL_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
+  FULL_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
+  FULL_2D:{t:'angka',d:2,ph:'Tepat 2 digit'},
+  BB_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
+  BB_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
+  BB_2D:{t:'angka',d:2,ph:'Tepat 2 digit'},
+  BB_4D_B:{t:'angka',d:4,ph:'4 digit (terbalik)'},
+  BB_3D_B:{t:'angka',d:3,ph:'3 digit (terbalik)'},
+  BB_2D_B:{t:'angka',d:2,ph:'2 digit (terbalik)'},
+  DISC_5D:{t:'angka',d:5,ph:'Tepat 5 digit (misal 12345)'},
+  FULL_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
+  BB_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
+  BB_5D_B:{t:'angka',d:5,ph:'5 digit (terbalik)'},
+  P1_4D:{t:'angka',d:4,ph:'4 digit'},P1_3D:{t:'angka',d:3,ph:'3 digit'},P1_2D:{t:'angka',d:2,ph:'2 digit'},
+  P2_4D:{t:'angka',d:4,ph:'4 digit'},P2_3D:{t:'angka',d:3,ph:'3 digit'},P2_2D:{t:'angka',d:2,ph:'2 digit'},
+  P3_4D:{t:'angka',d:4,ph:'4 digit'},P3_3D:{t:'angka',d:3,ph:'3 digit'},P3_2D:{t:'angka',d:2,ph:'2 digit'},
+  CB_0:{t:'angka',d:1,ph:'1 digit saja (contoh: 5)'},
+  CB_1:{t:'angka',d:2,ph:'Tepat 2 digit (contoh: 34)'},
+  CB_2:{t:'angka',d:3,ph:'Tepat 3 digit (contoh: 123)'},
+  CB_3:{t:'angka',d:4,ph:'Tepat 4 digit (contoh: 1234)'},
+  CB2D_0:{t:'angka',d:2,ph:'Tepat 2 digit'},
+  CB2D_1:{t:'angka',d:3,ph:'Tepat 3 digit'},
+  CB2D_2:{t:'angka',d:4,ph:'Tepat 4 digit'},
+  CB2D_3:{t:'angka',d:5,ph:'Tepat 5 digit'},
+  CB4D_0:{t:'angka',d:4,ph:'Tepat 4 digit'},
+  CB4D_1:{t:'angka',d:5,ph:'Tepat 5 digit'},
+  CN_0:{t:'angka',d:3,ph:'3 digit berbeda (contoh: 135)'},
+  CN_1:{t:'angka',d:4,ph:'4 digit berbeda (contoh: 1356)'},
+  CN_2:{t:'angka',d:5,ph:'5 digit berbeda (contoh: 12345)'},
+  CJ:{t:'angka',d:1,ph:'1 digit (contoh: 5)',
+    posisi:[{v:'AS',l:'AS (Ribuan)'},{v:'KOP',l:'KOP (Ratusan)'},{v:'KEPALA',l:'KEPALA (Puluhan)'},{v:'EKOR',l:'EKOR (Satuan)'}]},
+  SHIO:{t:'dropdown',d:null,ph:null,lbl:'Pilih Shio',
+    opts:[{v:'TIKUS',l:'Tikus'},{v:'KERBAU',l:'Kerbau'},{v:'MACAN',l:'Macan'},
+          {v:'KELINCI',l:'Kelinci'},{v:'NAGA',l:'Naga'},{v:'ULAR',l:'Ular'},
+          {v:'KUDA',l:'Kuda'},{v:'KAMBING',l:'Kambing'},{v:'MONYET',l:'Monyet'},
+          {v:'AYAM',l:'Ayam'},{v:'ANJING',l:'Anjing'},{v:'BABI',l:'Babi'}]},
+  '5050':{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
+    opts:[{v:'BESAR',l:'Besar'},{v:'KECIL',l:'Kecil'},{v:'GENAP',l:'Genap'},{v:'GANJIL',l:'Ganjil'}]},
+  DASAR_BESAR:{t:'none',d:null,ph:null},
+  DASAR_KECIL:{t:'none',d:null,ph:null},
+  TT:{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
+    opts:[{v:'TENGAH',l:'Tengah'},{v:'TEPI',l:'Tepi'}]},
+  SH:{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
+    opts:[{v:'SILANG',l:'Silang'},{v:'HOMO',l:'Homo'}]},
+  KK2:{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
+    opts:[{v:'KEMBANG',l:'Kembang'},{v:'KEMPIS',l:'Kempis'},{v:'KEMBAR',l:'Kembar'}]},
+  KOMP:{t:'angka',d:null,ph:'Nomor kombinasi',req:true},
+};
+
+function getRule(j){ return BETTING_RULES[j]||{t:'angka',d:null,ph:'Nomor'}; }
+
+// UI — TAMBAH BARIS (DYNAMIC)
+let rc=0;
+function addRow(){
+  const pas=document.getElementById("inPasaran").value;
+  const list=getJenis(pas);
+  rc++;
+  const id=rc;
+  const div=document.createElement("div");
+  div.className="bet-row";
+  div.id="r"+id;
+  const opts=list.map(j=>'<option value="'+esc(j.v)+'">'+esc(j.l)+'</option>').join('');
+  div.innerHTML=
+    '<div class="row-top">'+
+      '<select class="rj"></select>'+
+      '<input type="number" class="rb" placeholder="Nominal Bet" min="0" step="1000">'+
+      '<button class="rm-btn">×</button>'+
+    '</div>'+
+    '<div class="row-mid hide" id="mid'+id+'"></div>'+
+    '<div class="row-bot"><span class="err-msg" id="err'+id+'"></span></div>';
+  const sel=div.querySelector('.rj');
+  sel.innerHTML=opts;
+  div.querySelector('.rm-btn').addEventListener('click',()=>{ document.getElementById("r"+id)?.remove(); });
+  div.querySelector('.rb').addEventListener('input',()=>validateRow(id));
+  sel.addEventListener('change',()=>{ updateRowUI(id); validateRow(id); });
+  document.getElementById("betList").appendChild(div);
+  updateRowUI(id);
+}
+
+function updateRowUI(id){
+  const row=document.getElementById("r"+id);
+  if(!row)return;
+  const j=row.querySelector('.rj').value;
+  const rule=getRule(j);
+  const mid=document.getElementById("mid"+id);
+  const needAngka=rule.t==='angka';
+  const needDrop=rule.t==='dropdown';
+  const needPos=!!rule.posisi;
+
+  if(rule.t==='none'){ mid.className="row-mid hide"; mid.innerHTML=''; return; }
+
+  mid.className="row-mid "+((needAngka&&needPos)?'c2':'c1');
+  let html='';
+
+  if(needAngka){
+    const maxL=rule.d||5;
+    const ph=rule.ph||('Tepat '+maxL+' digit');
+    html+=
+      '<div>'+
+        '<span class="inp-lbl">Nomor</span>'+
+        '<input type="text" class="rn mono" id="rn'+id+'" placeholder="'+esc(ph)+'" maxlength="'+maxL+'">'+
+        '<span class="hint-msg">'+(rule.d?'Wajib tepat '+rule.d+' digit':'Masukkan nomor')+'</span>'+
+      '</div>';
+  }
+
+  if(needPos&&rule.posisi){
+    const posOpts=rule.posisi.map(o=>'<option value="'+esc(o.v)+'">'+esc(o.l)+'</option>').join('');
+    html+=
+      '<div>'+
+        '<span class="inp-lbl">Posisi</span>'+
+        '<select class="rpos" id="rpos'+id+'"><option value="">— Pilih Posisi —</option>'+posOpts+'</select>'+
+      '</div>';
+  }
+
+  if(needDrop&&rule.opts){
+    const dropOpts=rule.opts.map(o=>'<option value="'+esc(o.v)+'">'+esc(o.l)+'</option>').join('');
+    html+=
+      '<div>'+
+        '<span class="inp-lbl">'+esc(rule.lbl||'Pilih')+'</span>'+
+        '<select class="rsub" id="rsub'+id+'"><option value="">— Pilih —</option>'+dropOpts+'</select>'+
+      '</div>';
+  }
+
+  mid.innerHTML=html;
+
+  const rnEl=document.getElementById("rn"+id);
+  if(rnEl){
+    rnEl.addEventListener('input',()=>{
+      rnEl.value=rnEl.value.replace(/[^0-9]/g,'');
+      if(rule.d&&rnEl.value.length>rule.d) rnEl.value=rnEl.value.slice(0,rule.d);
+      validateRow(id);
+    });
+  }
+  const rsubEl=document.getElementById("rsub"+id);
+  if(rsubEl) rsubEl.addEventListener('change',()=>validateRow(id));
+  const rposEl=document.getElementById("rpos"+id);
+  if(rposEl) rposEl.addEventListener('change',()=>validateRow(id));
+}
+
+function validateRow(id){
+  const row=document.getElementById("r"+id);
+  if(!row)return{ok:false};
+  const j=row.querySelector('.rj').value;
+  const rule=getRule(j);
+  const errEl=document.getElementById("err"+id);
+  const bet=parseFloat(row.querySelector('.rb').value)||0;
+  let msg='';
+
+  if(rule.t==='angka'&&(rule.d||rule.req)){
+    const rnEl=document.getElementById("rn"+id);
+    const val=rnEl?rnEl.value:'';
+    if(!val) msg='Nomor wajib diisi'+(rule.d?' (tepat '+rule.d+' digit)':'');
+    else if(rule.d&&val.length!==rule.d) msg='Harus tepat '+rule.d+' digit — sekarang '+val.length+' digit';
+  }
+
+  if(!msg&&rule.posisi){
+    const posEl=document.getElementById("rpos"+id);
+    if(posEl&&!posEl.value) msg='Silakan pilih posisi: AS / KOP / KEPALA / EKOR';
+  }
+
+  if(!msg&&rule.t==='dropdown'&&rule.opts){
+    const subEl=document.getElementById("rsub"+id);
+    if(subEl&&!subEl.value) msg='Silakan pilih '+(rule.lbl||'tipe');
+  }
+
+  if(!msg&&bet<=0) msg='Nominal bet belum diisi';
+
+  if(errEl){ errEl.textContent=msg; errEl.className=msg?'err-msg show':'err-msg'; }
+  row.classList.toggle('row-err',!!msg&&bet>0);
+  row.classList.toggle('row-ok',!msg&&bet>0);
+  return{ok:!msg};
+}
+
+function getRowNomor(id,j){
+  const rule=getRule(j);
+  if(rule.t==='angka'){ const el=document.getElementById("rn"+id); return el?el.value.trim():''; }
+  if(rule.t==='dropdown'&&rule.opts){ const el=document.getElementById("rsub"+id); return el?el.value:''; }
+  return '';
+}
+function getRowPosisi(id){ const el=document.getElementById("rpos"+id); return el?el.value:''; }
+
+function onPasaranChange(){
+  const pas=document.getElementById("inPasaran").value;
+  const list=getJenis(pas);
+  const opts=list.map(j=>'<option value="'+esc(j.v)+'">'+esc(j.l)+'</option>').join('');
+  document.querySelectorAll(".bet-row").forEach(row=>{
+    const rid=row.id.slice(1);
+    const sel=row.querySelector(".rj");
+    if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML=opts;
+    if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+    updateRowUI(rid);
+  });
+}
+
+// KALKULASI UTAMA
+const lastCalc={bet:0,disc:0,bayar:0,menang:0,profit:0,pasaran:'',result:''};
+
+function kalkulasi(){
+  const res=document.getElementById("inResult").value.trim();
+  const pas=document.getElementById("inPasaran").value;
+  if(!res){alert("Masukkan nomor result!");return;}
+
+  const betRows=document.querySelectorAll(".bet-row");
+  if(!betRows.length){alert("Tambahkan minimal 1 taruhan!");return;}
+
+  let hasErr=false;
+  const activeIds=[];
+  betRows.forEach(row=>{
+    const id=row.id.slice(1);
+    const bet=parseFloat(row.querySelector('.rb').value)||0;
+    if(bet<=0)return;
+    const v=validateRow(id);
+    if(!v.ok) hasErr=true;
+    else activeIds.push(id);
+  });
+
+  if(hasErr){
+    const fe=document.querySelector('.bet-row.row-err');
+    if(fe)fe.scrollIntoView({behavior:'smooth',block:'center'});
+    alert("Ada input yang belum lengkap!\nPerbaiki field yang ditandai merah terlebih dahulu.");
+    return;
+  }
+  if(!activeIds.length){alert("Tidak ada taruhan aktif (bet > 0)!");return;}
+
+  let tBet=0,tDisc=0,tBayar=0,tMenang=0;
+  const hasil=[];
+
+  activeIds.forEach((id,i)=>{
+    const row=document.getElementById("r"+id);
+    const j=row.querySelector(".rj").value;
+    const rule=getRule(j);
+    const bet=parseFloat(row.querySelector('.rb').value)||0;
+    const lbl=row.querySelector(".rj").selectedOptions[0]?.text||j;
+    const nom=getRowNomor(id,j);
+    const pos=getRowPosisi(id);
+    const nomDisp=rule.posisi&&pos ? nom+'@'+pos : (nom||'—');
+    const c=hitung(j,bet,pas);
+    const ok=cocok(res,nom,j);
+    const win=ok?Math.round(c.menang):0;
+    tBet+=bet;tDisc+=c.disc;tBayar+=c.bayar;tMenang+=win;
+    hasil.push({no:i+1,jenis:lbl,nomor:nomDisp,bet,disc:c.disc,bayar:c.bayar,menang:win,cocok:ok,dp:c.dp});
+  });
+
+  const profit=tMenang-tBayar;
+  Object.assign(lastCalc,{bet:tBet,disc:tDisc,bayar:tBayar,menang:tMenang,profit,pasaran:pas,result:res});
+
+  document.getElementById("s-bet").textContent="Rp "+fmt(tBet);
+  document.getElementById("s-disc").textContent="Rp "+fmt(tDisc);
+  document.getElementById("s-bayar").textContent="Rp "+fmt(tBayar);
+  document.getElementById("s-menang").textContent="Rp "+fmt(tMenang);
+  const pe=document.getElementById("s-profit");
+  pe.textContent=(profit>=0?"+ ":"- ")+"Rp "+fmt(Math.abs(profit));
+  pe.className="sc-val mono "+(profit>=0?"pos":"neg");
+  document.getElementById("s-prof-sub").textContent=profit>=0?"Profit":"Loss";
+
+  const tb=document.getElementById("hasilBody");
+  if(!hasil.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ei">Tidak ada taruhan aktif</span></div></td></tr>';return;}
+  tb.innerHTML=hasil.map(r=>
+    '<tr class="'+(r.cocok?'win':'lose')+'">'
+    +'<td class="td">'+r.no+'</td>'
+    +'<td><span class="badge bt">'+esc(r.jenis)+'</span></td>'
+    +'<td class="mono tg">'+esc(r.nomor)+'</td>'
+    +'<td class="mono tb">'+fmt(r.bet)+'</td>'
+    +'<td class="mono tp">'+fmt(r.disc)+'<small style="color:var(--text3)"> ('+fmtPct(r.dp)+')</small></td>'
+    +'<td class="mono">'+fmt(r.bayar)+'</td>'
+    +'<td class="mono '+(r.cocok?'tgr':'td')+'">'+(r.cocok?fmt(r.menang):'—')+'</td>'
+    +'<td><span class="badge '+(r.cocok?'bw':'bl')+'">'+(r.cocok?'MENANG':'TIDAK')+'</span></td>'
+    +'</tr>'
+  ).join('');
+
+  const ep=document.getElementById("explainPanel");
+  ep.style.display="block";
+  const menangRows=hasil.filter(r=>r.cocok);
+  const losRows=hasil.filter(r=>!r.cocok);
+
+  let exHtml='';
+
+  // ── Header sapaan ─────────────────────────────────────────────
+  if(menangRows.length>0 && losRows.length===0){
+    exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.5;">'+
+      'Selamat untuk bettingan anda menang sesuai dengan hasil result yang keluar ya bosku'+
+    '</div>';
+  } else if(menangRows.length>0 && losRows.length>0){
+    exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.5;">'+
+      'Berikut untuk bettingan Anda yang menang, bosku.'+
+    '</div>';
+  } else {
+    exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:12px;line-height:1.5;">'+
+      'Sayang sekali bosku, belum beruntung kali ini. Coba lagi ya.'+
+    '</div>';
+  }
+
+  // ── Tiket menang ──────────────────────────────────────────────
+  if(menangRows.length){
+    menangRows.forEach(r=>{
+      exHtml+='<div style="margin-bottom:10px;">'+buatPenjelasan(r)+'</div>';
+    });
+  }
+
+  // ── Tiket kalah ───────────────────────────────────────────────
+  if(losRows.length){
+    exHtml+='<div style="margin-top:10px;margin-bottom:8px;font-size:.75rem;font-weight:700;color:var(--red);">'+
+      'Taruhan yang belum beruntung ('+losRows.length+' tiket):'+
+    '</div>';
+    losRows.forEach(r=>{
+      exHtml+=
+        '<div class="exbox" style="margin-bottom:6px;">'+
+          '• <strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+
+          'tidak cocok dengan result. Taruhan kalah, bosku.'+
+        '</div>';
+    });
+  }
+
+  // ── Rekap akhir ───────────────────────────────────────────────
+  const profitSign = profit>=0 ? '+' : '-';
+  const profitCls  = profit>=0 ? 'tgr' : 'tr';
+  exHtml+=
+    '<div style="margin-top:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;font-size:.75rem;">'+
+      '<div style="font-size:.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--text2);font-weight:600;margin-bottom:10px;">Rekap Akhir</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
+        '<span class="td">Total Bet</span><span class="mono tb">Rp '+fmt(tBet)+'</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
+        '<span class="td">Total Diskon</span><span class="mono tp">− Rp '+fmt(tDisc)+'</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2);font-weight:700;">'+
+        '<span>Total Bayar</span><span class="mono tg">Rp '+fmt(tBayar)+'</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
+        '<span class="td">Total Kemenangan</span><span class="mono tgr">Rp '+fmt(tMenang)+'</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:6px 0 0;font-weight:700;">'+
+        '<span>Profit / Loss</span>'+
+        '<span class="mono '+profitCls+'">'+profitSign+' Rp '+fmt(Math.abs(profit))+'</span>'+
+      '</div>'+
+      (profit<0
+        ? '<div style="margin-top:6px;font-size:.62rem;color:var(--text2);">Semangat ya bosku, next round lebih beruntung.</div>'
+        : '<div style="margin-top:6px;font-size:.62rem;color:var(--green);">Keuntungan = Menang ('+fmt(tMenang)+') - Bayar ('+fmt(tBayar)+')</div>'
+      )+
+    '</div>';
+
+  ep.innerHTML=exHtml;
+
+  const bd=document.getElementById("bdown");
+  bd.style.display="block";
+  const plbl=esc(document.getElementById("inPasaran").selectedOptions[0].text);
+  bd.innerHTML=
+    '<div class="bd-row"><span class="td">Total Bet</span><span class="mono tb">Rp '+fmt(tBet)+'</span></div>'+
+    '<div class="bd-row"><span class="td">Total Diskon</span><span class="mono tp">- Rp '+fmt(tDisc)+'</span></div>'+
+    '<div class="bd-row tot"><span>Total Bayar</span><span class="mono tg">Rp '+fmt(tBayar)+'</span></div>'+
+    '<div class="bd-row"><span class="td">Total Kemenangan</span><span class="mono tgr">Rp '+fmt(tMenang)+'</span></div>'+
+    '<div class="bd-row tot"><span>Profit / Loss</span><span class="mono '+(profit>=0?'tgr':'tr')+'">'+(profit>=0?'+':'-')+' Rp '+fmt(Math.abs(profit))+'</span></div>'+
+    '<div style="margin-top:8px;font-size:.65rem;color:var(--text3);">Result: <span class="mono tg">'+esc(res)+'</span> | Pasaran: <span style="color:var(--accent)">'+plbl+'</span> | '+esc(new Date().toLocaleString('id-ID'))+'</div>';
+
+  sw('hasil',document.querySelector('.tab'));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════
+let hist=[];
+function simpanHistory(){
+  const r=document.getElementById("inResult").value.trim();
+  if(!r){alert("Hitung dulu!");return;}
+  const pe=document.getElementById("s-profit");
+  const pos=pe.classList.contains("pos");
+  const abs=parseInt(pe.textContent.replace(/\D/g,''))||0;
+  hist.unshift({
+    result:r,bet:document.getElementById("s-bet").textContent,
+    menang:document.getElementById("s-menang").textContent,
+    profit:pos?abs:-abs,
+    ts:new Date().toLocaleString('id-ID'),
+    pas:document.getElementById("inPasaran").selectedOptions[0].text
+  });
+  renderHist();
+  sw('history',document.querySelectorAll('.tab')[1]);
+}
+function renderHist(){
+  const el=document.getElementById("histList");
+  if(!hist.length){el.innerHTML='<div class="empty"><span class="ei">Belum ada riwayat</span></div>';return;}
+  el.innerHTML=hist.map((h,i)=>
+    '<div class="hi">'+
+      '<div><div class="hi-res">'+esc(h.result)+'</div>'+
+      '<div style="font-size:.62rem;color:var(--text3);margin-top:2px;">'+esc(h.ts)+' · '+esc(h.pas)+'</div></div>'+
+      '<div style="text-align:right;">'+
+        '<div style="font-size:.72rem;color:var(--text2);">Bet: '+esc(h.bet)+'</div>'+
+        '<div style="font-size:.72rem;color:var(--green);">Menang: '+esc(h.menang)+'</div>'+
+        '<div style="font-size:.72rem;color:'+(h.profit>=0?'var(--green)':'var(--red)')+';">'+(h.profit>=0?'▲':'▼')+' '+fmt(Math.abs(h.profit))+'</div>'+
+      '</div>'+
+      '<button class="rm-btn" onclick="hist.splice('+i+',1);renderHist()">×</button>'+
+    '</div>'
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════════════
+function resetForm(){
+  document.getElementById("inResult").value="";
+  document.getElementById("betList").innerHTML="";
+  document.getElementById("hasilBody").innerHTML=
+    '<tr><td colspan="8"><div class="empty"><span class="ei">Belum ada data</span><p>Masukkan result dan taruhan, lalu klik Hitung Sekarang</p></div></td></tr>';
+  document.getElementById("explainPanel").style.display="none";
+  document.getElementById("bdown").style.display="none";
+  ["s-bet","s-disc","s-bayar","s-menang"].forEach(id=>
+    document.getElementById(id).textContent="Rp 0");
+  const pe=document.getElementById("s-profit");
+  pe.textContent="Rp 0"; pe.className="sc-val mono";
+  document.getElementById("s-prof-sub").textContent="Belum dihitung";
+  rc=0; addRow();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+function sw(name,btn){
+  document.querySelectorAll(".tp-pane").forEach(p=>p.classList.remove("on"));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("on"));
+  document.getElementById("tp-"+name)?.classList.add("on");
+  if(btn)btn.classList.add("on");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LIST HADIAH — tabel bergaya sci-fi dark sesuai referensi
+// ═══════════════════════════════════════════════════════════════
+function renderRef(){
+  const el = document.getElementById("refGrid");
+
+  // ── Helper: buat blok tabel ──────────────────────────────────
+  function block(title, headCols, rows){
+    // Hitung lebar kolom: kolom pertama lebih lebar, sisanya sama rata
+    const n = headCols.length;
+    const firstW = n === 2 ? 55 : n === 3 ? 45 : 38; // % untuk kolom pertama
+    const restW  = ((100 - firstW) / (n - 1)).toFixed(1);
+
+    const colgroup = '<colgroup>' +
+      '<col style="width:'+firstW+'%">' +
+      Array(n-1).fill('<col style="width:'+restW+'%">').join('') +
+      '</colgroup>';
+
+    const thead = '<tr>' + headCols.map(h =>
+      '<th>' + h + '</th>'
+    ).join('') + '</tr>';
+
+    const tbody = rows.map(r =>
+      '<tr>' + r.map((cell, ci) => {
+        let cls = '';
+        const s = String(cell);
+        if(ci > 0){
+          if(/^x[\d.,]+$/.test(s))                           cls = 'hval';
+          else if(/^\d+[\.,]\d+%$/.test(s)||/^\d+%$/.test(s)) cls = 'hdisc';
+          else if(s.includes('Kei') && s.includes('-'))       cls = 'hkei-neg';
+          else if(s.includes('Kei') && s.includes('+'))       cls = 'hkei-pos';
+          else if(s === '—')                                   cls = 'hnote';
+        }
+        return '<td' + (cls ? ' class="'+cls+'"' : '') + '>' + cell + '</td>';
+      }).join('') + '</tr>'
+    ).join('');
+
+    return '<div class="htable-block">' +
+      '<div class="htable-title">' + title + '</div>' +
+      '<div class="twrap">' +
+      '<table class="htable">' +
+        colgroup +
+        '<thead>' + thead + '</thead>' +
+        '<tbody>' + tbody + '</tbody>' +
+      '</table>' +
+      '</div></div>';
+  }
+
+  let html = '';
+
+  // ── 1. HADIAH PRIZE 1, 2, 3 ─────────────────────────────────
+  html += block(
+    'HADIAH PRIZE 1, 2, 3',
+    ['JENIS', '4D', '3D', '2D'],
+    [
+      ['PRIZE 1', 'x6.500', 'x650', 'x70'],
+      ['PRIZE 2', 'x2.100', 'x210', 'x20'],
+      ['PRIZE 3', 'x1.100', 'x110', 'x8'],
+    ]
+  );
+
+  // ── 2. BET FULL — ALL PASARAN (kecuali Hoki Draw) ───────────
+  html += block(
+    'HADIAH BET FULL ALL PASARAN — KECUALI PASARAN HOKI DRAW',
+    ['HADIAH', 'KALI'],
+    [
+      ['4D', 'x10.000'],
+      ['3D', 'x1.000'],
+      ['2D', 'x100'],
+    ]
+  );
+
+  // ── 3. BET FULL — HOKI DRAW 5D ──────────────────────────────
+  html += block(
+    'HADIAH BET FULL KHUSUS PASARAN HOKI DRAW 5D',
+    ['HADIAH', 'KALI'],
+    [
+      ['5D', 'x88.000'],
+      ['4D', 'x10.000'],
+      ['3D', 'x1.000'],
+      ['2D', 'x100'],
+    ]
+  );
+
+  // ── 4. DISCOUNT ALL PASARAN (kecuali KK4D, TotoMali, Hoki) ──
+  html += block(
+    'HADIAH DISCOUNT ALL PASARAN — KECUALI KING KONG 4D, TOTO MALI, HOKI DRAW',
+    ['HADIAH', 'KALI', 'DISCOUNT'],
+    [
+      ['4D',                'x3.000', '66.5%'],
+      ['3D',                'x400',   '59.5%'],
+      ['2D Belakang',       'x70',    '29.5%'],
+      ['2D Depan dan Tengah','x65',   '29.5%'],
+    ]
+  );
+
+  // ── 5. DISCOUNT — KING KONG 4D ──────────────────────────────
+  html += block(
+    'HADIAH DISCOUNT KHUSUS PASARAN KING KONG 4D',
+    ['HADIAH', 'KALI', 'DISCOUNT'],
+    [
+      ['4D', 'x6.000', '33%'],
+      ['3D', 'x700',   '24%'],
+      ['2D', 'x80',    '15%'],
+    ]
+  );
+
+  // ── 6. DISCOUNT — TOTO MALI ─────────────────────────────────
+  html += block(
+    'HADIAH DISCOUNT KHUSUS PASARAN TOTO MALI',
+    ['HADIAH', 'KALI', 'DISCOUNT'],
+    [
+      ['4D',              'x3.000', '67%'],
+      ['3D',              'x400',   '57%'],
+      ['2D Depan',        'x70',    '27%'],
+      ['2D Tengah',       'x70',    '27%'],
+      ['2D Belakang',     'x70',    '27%'],
+    ]
+  );
+
+  // ── 7. DISCOUNT — HOKI DRAW 5D ──────────────────────────────
+  html += block(
+    'HADIAH DISCOUNT KHUSUS PASARAN HOKI DRAW 5D',
+    ['HADIAH', 'KALI', 'DISCOUNT'],
+    [
+      ['5D', 'x50.000', '38%'],
+      ['4D', 'x7.000',  '20%'],
+      ['3D', 'x750',    '20%'],
+      ['2D', 'x75',     '20%'],
+    ]
+  );
+
+  // ── 8. BB ALL PASARAN (kecuali Hoki Draw) ───────────────────
+  html += block(
+    'HADIAH BOLAK BALIK ALL PASARAN — KECUALI PASARAN HOKI DRAW',
+    ['HADIAH', 'TEPAT', 'TERBALIK (BB)'],
+    [
+      ['4D', 'x4.000', 'x200'],
+      ['3D', 'x400',   'x100'],
+      ['2D', 'x70',    'x20'],
+    ]
+  );
+
+  // ── 9. BB — HOKI DRAW 5D ────────────────────────────────────
+  html += block(
+    'HADIAH BOLAK BALIK KHUSUS PASARAN HOKI DRAW 5D',
+    ['HADIAH', 'TEPAT', 'TERBALIK (BB)'],
+    [
+      ['5D', 'x50.000', 'x350'],
+      ['4D', 'x5.000',  'x180'],
+      ['3D', 'x500',    'x75'],
+      ['2D', 'x80',     'x15'],
+    ]
+  );
+
+  // ── 10. COLOK BEBAS — SEMUA PASARAN ─────────────────────────
+  html += block(
+    'HADIAH COLOK BEBAS — ALL PASARAN',
+    ['JENIS', 'KALI', 'DISCOUNT'],
+    [
+      ['Colok Bebas (1 Digit)', 'x1.5',  '6%'],
+      ['Colok Bebas (2 Digit)', 'x3',    '6%'],
+      ['Colok Bebas (3 Digit)', 'x4.5',  '6%'],
+      ['Colok Bebas (4 Digit)', 'x6',    '6%'],
+    ]
+  );
+
+  // ── 11. COLOK BEBAS 2D — ALL PASARAN ────────────────────────
+  html += block(
+    'HADIAH COLOK BEBAS 2D — ALL PASARAN',
+    ['JENIS', 'KALI', 'DISCOUNT'],
+    [
+      ['CB 2D (2 Digit)',  'x7',   '10%'],
+      ['CB 2D (3 Digit)',  'x11',  '10%'],
+      ['CB 2D (4 Digit)',  'x18',  '10%'],
+      ['CB 2D (5 Digit)',  'x200', '10%'],
+    ]
+  );
+
+  // ── 12. COLOK BEBAS 2D — HOKI DRAW 5D ───────────────────────
+  html += block(
+    'HADIAH COLOK BEBAS 2D — KHUSUS HOKI DRAW 5D',
+    ['JENIS', 'KALI', 'DISCOUNT'],
+    [
+      ['CB 2D (2 Digit)',  'x4',   '10%'],
+      ['CB 2D (3 Digit)',  'x6',   '10%'],
+      ['CB 2D (4 Digit)',  'x20',  '10%'],
+      ['CB 2D (5 Digit)',  'x200', '10%'],
+    ]
+  );
+
+  // ── 13. COLOK BEBAS 4D — HOKI DRAW 5D ───────────────────────
+  html += block(
+    'HADIAH COLOK BEBAS 4D — KHUSUS HOKI DRAW 5D',
+    ['JENIS', 'KALI', 'DISCOUNT'],
+    [
+      ['CB 4D (4 Digit)',  'x50',  '10%'],
+      ['CB 4D (5 Digit)',  'x200', '10%'],
+    ]
+  );
+
+  // ── 14. COLOK NAGA ───────────────────────────────────────────
+  html += block(
+    'HADIAH COLOK NAGA',
+    ['JENIS', 'ALL PASARAN', 'HOKI DRAW 5D', 'DISCOUNT'],
+    [
+      ['Colok Naga (3 Digit)', 'x23',  'x12',  '10%'],
+      ['Colok Naga (4 Digit)', 'x35',  'x30',  '10%'],
+      ['Colok Naga (5 Digit)', 'x125', 'x125', '10%'],
+    ]
+  );
+
+  // ── 15. COLOK JITU / SHIO / KOMBINASI ───────────────────────
+  html += block(
+    'HADIAH COLOK JITU, SHIO, KOMBINASI — ALL PASARAN',
+    ['JENIS', 'KALI', 'DISCOUNT'],
+    [
+      ['Colok Jitu', 'x8',   '6%'],
+      ['Shio',       'x9.5', '5%'],
+      ['Kombinasi',  'x2.6', '8%'],
+    ]
+  );
+
+  // ── 16. KEI-BASED ────────────────────────────────────────────
+  html += block(
+    'HADIAH TARUHAN KEI-BASED (1 : 1) — ALL PASARAN',
+    ['JENIS', 'SISTEM', 'KEI', 'DISCOUNT'],
+    [
+      ['Tengah / Tepi',       '1 : 1', 'Kei -3%',  '2%'],
+      ['50 - 50',             '1 : 1', 'Kei -3%',  '2%'],
+      ['Silang / Homo',       '1 : 1', 'Kei -3%',  '2%'],
+      ['Kembang / Kempis',    '1 : 1', 'Kei -3%',  '2%'],
+      ['Dasar Besar / Ganjil','1 : 1', 'Kei -25%', '2%'],
+      ['Dasar Kecil / Genap', '1 : 1', 'Kei +10%', '2%'],
+    ]
+  );
+
+  el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORMAT + CLOCK + INIT
+// ═══════════════════════════════════════════════════════════════
+const fmt=n=>Math.round(n).toLocaleString('id-ID');
+const fmtPct=d=>{const s=(+(d*100).toFixed(1)).toString();return(s.endsWith('.0')?s.slice(0,-2):s)+'%';};
+const updClk=()=>document.getElementById("clk").textContent=new Date().toLocaleTimeString('id-ID');
+renderRef();setInterval(updClk,1000);updClk();addRow();
+// Enforce digit-only on result input
+document.getElementById("inResult").addEventListener("input",function(){
+  this.value=this.value.replace(/[^0-9]/g,"").slice(0,5);
+});
+</script>
+</body>
+</html>
