@@ -410,7 +410,7 @@ const H = {
   UMUM:{
     DISC:{"4D":{h:3000,d:0.665},"3D":{h:400,d:0.595},"2D":{h:70,d:0.295},"2DDP":{h:65,d:0.295},"2DTG":{h:65,d:0.295}},
     FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
-    BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}},
+    BB:{"4D":{t:4000,b:200,d:0.665},"3D":{t:400,b:100,d:0.595},"2D":{t:70,b:20,d:0.295}},
     P1:{"4D":{h:6500},"3D":{h:650},"2D":{h:70},"2DDP":{h:70},"2DTG":{h:70}},
     P2:{"4D":{h:2100},"3D":{h:210},"2D":{h:20},"2DDP":{h:20},"2DTG":{h:20}},
     P3:{"4D":{h:1100},"3D":{h:110},"2D":{h:8}, "2DDP":{h:8}, "2DTG":{h:8}},
@@ -432,17 +432,17 @@ const H = {
   TOTOMALI:{
     DISC:{"4D":{h:3000,d:0.67},"3D":{h:400,d:0.57},"2D":{h:70,d:0.27},"2DDP":{h:70,d:0.27},"2DTG":{h:70,d:0.27}},
     FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
-    BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}}
+    BB:{"4D":{t:4000,b:200,d:0.67},"3D":{t:400,b:100,d:0.57},"2D":{t:70,b:20,d:0.27}}
   },
   KK4D:{
     DISC:{"4D":{h:6000,d:0.33},"3D":{h:700,d:0.24},"2D":{h:80,d:0.15},"2DDP":{h:80,d:0.15},"2DTG":{h:80,d:0.15}},
     FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
-    BB:{"4D":{t:4000,b:200},"3D":{t:400,b:100},"2D":{t:70,b:20}}
+    BB:{"4D":{t:4000,b:200,d:0.33},"3D":{t:400,b:100,d:0.24},"2D":{t:70,b:20,d:0.15}}
   },
   HOKI5D:{
     FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     DISC:{"5D":{h:50000,d:0.38},"4D":{h:7000,d:0.20},"3D":{h:750,d:0.20},"2D":{h:75,d:0.20},"2DDP":{h:75,d:0.20},"2DTG":{h:75,d:0.20}},
-    BB:{"5D":{t:50000,b:350},"4D":{t:5000,b:180},"3D":{t:500,b:75},"2D":{t:80,b:15}},
+    BB:{"5D":{t:50000,b:350,d:0.38},"4D":{t:5000,b:180,d:0.20},"3D":{t:500,b:75,d:0.20},"2D":{t:80,b:15,d:0.20}},
     CB:{d:0.06, hadiah:{1:1.5, 2:3, 3:4.5, 4:6, 5:6}},
     CB2D:{d:0.10, hadiah:{2:4, 3:6, 4:20, 5:200}},
     CB4D:[
@@ -501,9 +501,17 @@ function getJenis(pas){
   digitKeys.forEach(k=>{ if((P.FULL||{})[k]) fullItems.push({v:'FULL_'+k, l:fullLbl[k]}); });
   if(fullItems.length) groups.push({group:'◆ FULL (tanpa diskon)', items:fullItems});
 
-  // BOLAK-BALIK
+  // BOLAK-BALIK — tepat & acak OTOMATIS dalam 1 tiket (campuran):
+  //   result PERSIS sama    → hadiah TEPAT (t)
+  //   result acak/permutasi → hadiah ACAK  (b)
+  // Hanya 2 varian pembayaran per ukuran digit:
+  //   BB_xD_D : BB Diskon       — bayar dipotong % diskon pasaran
+  //   BB_xD   : BB Tidak Diskon — bayar penuh
   const bbItems = [];
-  bbKeys.forEach(k=>{ if((P.BB||{})[k]){ bbItems.push({v:'BB_'+k, l:k+' BB Tepat'}); bbItems.push({v:'BB_'+k+'_B', l:k+' BB Acak'}); }});
+  bbKeys.forEach(k=>{ if((P.BB||{})[k]){
+    bbItems.push({v:'BB_'+k+'_D', l:k+' BB Diskon'});
+    bbItems.push({v:'BB_'+k,      l:k+' BB Tidak Diskon'});
+  }});
   if(bbItems.length) groups.push({group:'◆ BOLAK-BALIK', items:bbItems});
 
   // PRIZE
@@ -573,13 +581,20 @@ function hitung(jenis, bet, pas){
   const dk  = pct => Math.round(bet*pct);
 
   // Guard: 5D HANYA valid di pasaran HOKI5D
-  const is5D = jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_B";
+  const is5D = jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_D";
   if(is5D && pas!=="HOKI5D") return {...nil, invalid:true};
 
   const fromD = k=>{const x=(P.DISC||{})[k];if(!x)return null;const d=dk(x.d||0);return{disc:d,bayar:bet-d,menang:bet*x.h,dp:x.d||0};};
   const fromF = k=>{const x=(P.FULL||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.h,dp:0};};
-  const fromBT= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.t,dp:0};};
-  const fromBB= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.b,dp:0};};
+  // BB: tepat & acak otomatis (campuran). Nilai 'menang' final dipilih
+  // di kalkulasi() berdasarkan bbGrup dari match engine:
+  //   bbGrup "TEPAT" → bet × t  |  bbGrup "ACAK" → bet × b
+  // fromBBFull : BB Tidak Diskon — bayar penuh
+  // fromBBDisc : BB Diskon       — bayar dipotong x.d (mengikuti diskon pasaran)
+  const fromBBFull= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,dp:0,isBBC:true,
+    menangTepat:bet*x.t, menangAcak:bet*x.b, menang:bet*x.t};};
+  const fromBBDisc= k=>{const x=(P.BB||{})[k];if(!x)return null;const d=dk(x.d||0);return{disc:d,bayar:bet-d,dp:x.d||0,isBBC:true,
+    menangTepat:bet*x.t, menangAcak:bet*x.b, menang:bet*x.t};};
 
   // KEI dari BAYAR (TT / 5050 / SH / KK2)
   // kei negatif → user bayar lebih → keiAmt ditambahkan ke bayar
@@ -628,14 +643,14 @@ function hitung(jenis, bet, pas){
   if(jenis==="FULL_2D")  return fromF("2D")||nil;
   if(jenis==="FULL_2DDP")return fromF("2DDP")||nil;
   if(jenis==="FULL_2DTG")return fromF("2DTG")||nil;
-  if(jenis==="BB_5D")    return fromBT("5D")||nil;
-  if(jenis==="BB_4D")    return fromBT("4D")||nil;
-  if(jenis==="BB_3D")    return fromBT("3D")||nil;
-  if(jenis==="BB_2D")    return fromBT("2D")||nil;
-  if(jenis==="BB_5D_B")  return fromBB("5D")||nil;
-  if(jenis==="BB_4D_B")  return fromBB("4D")||nil;
-  if(jenis==="BB_3D_B")  return fromBB("3D")||nil;
-  if(jenis==="BB_2D_B")  return fromBB("2D")||nil;
+  if(jenis==="BB_5D")    return fromBBFull("5D")||nil;
+  if(jenis==="BB_4D")    return fromBBFull("4D")||nil;
+  if(jenis==="BB_3D")    return fromBBFull("3D")||nil;
+  if(jenis==="BB_2D")    return fromBBFull("2D")||nil;
+  if(jenis==="BB_5D_D")  return fromBBDisc("5D")||nil;
+  if(jenis==="BB_4D_D")  return fromBBDisc("4D")||nil;
+  if(jenis==="BB_3D_D")  return fromBBDisc("3D")||nil;
+  if(jenis==="BB_2D_D")  return fromBBDisc("2D")||nil;
 
   // PRIZE: kembalikan semua nilai per prize; kalkulasi() pilih sesuai prizeGrup
   if(jenis.startsWith("PRIZE_")){
@@ -713,25 +728,37 @@ function cocokStandard(res, nom, jenis, pos){
   if(!n) return false;
 
   // ── 5D ──────────────────────────────────────────────────────
-  if(jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_B"){
+  if(jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_D"){
     if(r.length!==5||n.length!==5) return false;
-    if(jenis==="BB_5D_B"){ if(r===n) return false; return perm(n.split('')).includes(r); }
+    if(jenis==="BB_5D"||jenis==="BB_5D_D"){
+      if(r===n) return{cocok:true,bbGrup:"TEPAT"};
+      return perm(n.split('')).includes(r)?{cocok:true,bbGrup:"ACAK"}:{cocok:false,bbGrup:null};
+    }
     return r===n;
   }
 
   // ── 4D ──────────────────────────────────────────────────────
-  if(jenis==="DISC_4D"||jenis==="FULL_4D"||jenis==="BB_4D") return r4===n;
-  if(jenis==="BB_4D_B"){ if(r4===n) return false; return perm(n.split('')).includes(r4); }
+  if(jenis==="DISC_4D"||jenis==="FULL_4D") return r4===n;
+  if(jenis==="BB_4D"||jenis==="BB_4D_D"){
+    if(r4===n) return{cocok:true,bbGrup:"TEPAT"};
+    return perm(n.split('')).includes(r4)?{cocok:true,bbGrup:"ACAK"}:{cocok:false,bbGrup:null};
+  }
 
   // ── 3D ──────────────────────────────────────────────────────
-  if(jenis==="DISC_3D"||jenis==="FULL_3D"||jenis==="BB_3D") return r3===n;
-  if(jenis==="BB_3D_B"){ if(r3===n) return false; return perm(n.split('')).includes(r3); }
+  if(jenis==="DISC_3D"||jenis==="FULL_3D") return r3===n;
+  if(jenis==="BB_3D"||jenis==="BB_3D_D"){
+    if(r3===n) return{cocok:true,bbGrup:"TEPAT"};
+    return perm(n.split('')).includes(r3)?{cocok:true,bbGrup:"ACAK"}:{cocok:false,bbGrup:null};
+  }
 
   // ── 2D ──────────────────────────────────────────────────────
   if(jenis==="DISC_2DDP"||jenis==="FULL_2DDP") return r2dp===n;
   if(jenis==="DISC_2DTG"||jenis==="FULL_2DTG") return r2tg===n;
-  if(jenis==="DISC_2D"||jenis==="FULL_2D"||jenis==="BB_2D") return r2===n;
-  if(jenis==="BB_2D_B"){ if(r2===n) return false; return perm(n.split('')).includes(r2); }
+  if(jenis==="DISC_2D"||jenis==="FULL_2D") return r2===n;
+  if(jenis==="BB_2D"||jenis==="BB_2D_D"){
+    if(r2===n) return{cocok:true,bbGrup:"TEPAT"};
+    return perm(n.split('')).includes(r2)?{cocok:true,bbGrup:"ACAK"}:{cocok:false,bbGrup:null};
+  }
 
   // ── COLOK BEBAS (CB) — 1 digit, kategori OTOMATIS dari kemunculan ──
   // Return {cocok, kena} agar kalkulasi() bisa hitung hadiah yang tepat
@@ -885,7 +912,7 @@ function cocok(res, nom, jenis, pas, pos){
     }
 
     // Non-Prize: patokan = grup 1
-    if(jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_B") return false;
+    if(jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_D") return false;
     return cocokStandard(p1, nom, jenis, pos);
   }
   return cocokStandard(res, nom, jenis, pos);
@@ -996,14 +1023,23 @@ const BETTING_RULES = {
   FULL_2DDP:{t:'angka',d:2,ph:'2 digit depan'},
   FULL_2DTG:{t:'angka',d:2,ph:'2 digit tengah'},
   FULL_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
-  BB_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
-  BB_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
-  BB_2D:{t:'angka',d:2,ph:'Tepat 2 digit'},
-  BB_4D_B:{t:'angka',d:4,ph:'4 digit (susunan berbeda)'},
-  BB_3D_B:{t:'angka',d:3,ph:'3 digit (susunan berbeda)'},
-  BB_2D_B:{t:'angka',d:2,ph:'2 digit (susunan berbeda)'},
-  BB_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
-  BB_5D_B:{t:'angka',d:5,ph:'5 digit (susunan berbeda)'},
+  // BB — tepat & acak otomatis (campuran); _D = varian Diskon
+  BB_4D:{t:'angka',d:4,ph:'4 digit — tepat & acak otomatis',
+    hint:'Result persis = hadiah Tepat, result acak (permutasi) = hadiah Acak'},
+  BB_3D:{t:'angka',d:3,ph:'3 digit — tepat & acak otomatis',
+    hint:'Result persis = hadiah Tepat, result acak (permutasi) = hadiah Acak'},
+  BB_2D:{t:'angka',d:2,ph:'2 digit — tepat & acak otomatis',
+    hint:'Result persis = hadiah Tepat, result acak (permutasi) = hadiah Acak'},
+  BB_5D:{t:'angka',d:5,ph:'5 digit — tepat & acak otomatis',
+    hint:'Result persis = hadiah Tepat, result acak (permutasi) = hadiah Acak'},
+  BB_4D_D:{t:'angka',d:4,ph:'4 digit — tepat & acak otomatis',
+    hint:'Varian Diskon: bayar dipotong diskon pasaran. Result persis = Tepat, acak = Acak'},
+  BB_3D_D:{t:'angka',d:3,ph:'3 digit — tepat & acak otomatis',
+    hint:'Varian Diskon: bayar dipotong diskon pasaran. Result persis = Tepat, acak = Acak'},
+  BB_2D_D:{t:'angka',d:2,ph:'2 digit — tepat & acak otomatis',
+    hint:'Varian Diskon: bayar dipotong diskon pasaran. Result persis = Tepat, acak = Acak'},
+  BB_5D_D:{t:'angka',d:5,ph:'5 digit — tepat & acak otomatis',
+    hint:'Varian Diskon: bayar dipotong diskon pasaran. Result persis = Tepat, acak = Acak'},
   PRIZE_4D:{t:'angka',d:4,ph:'Tepat 4 digit — Prize 1/2/3 otomatis'},
   PRIZE_3D:{t:'angka',d:3,ph:'Tepat 3 digit — Prize 1/2/3 otomatis'},
   PRIZE_2D:{t:'angka',d:2,ph:'2 digit belakang — Prize 1/2/3 otomatis'},
@@ -1303,6 +1339,7 @@ function kalkulasi(){
 
     let win=0;
     let kena=isObj?cocokResult.kena:undefined;
+    let bbGrup=isObj?cocokResult.bbGrup:undefined;
     let hadiah=undefined;
     let isCBFlag=false, isCB2DFlag=false, isCNFlag=false, isCB4DFlag=false;
 
@@ -1312,6 +1349,10 @@ function kalkulasi(){
         else if(pg==="Prize 2") win=Math.round(c.menangP2||c.menang);
         else if(pg==="Prize 3") win=Math.round(c.menangP3||c.menang);
         else                    win=Math.round(c.menang);
+      } else if(c.isBBC){
+        // BB CAMPURAN: hadiah dipilih sesuai cara menang
+        // TEPAT (susunan persis) → bet × t  |  ACAK (permutasi) → bet × b
+        win=bbGrup==="TEPAT"?Math.round(c.menangTepat):Math.round(c.menangAcak);
       } else if(c.isCB){
         // CB: menang = bayar + (bet × hadiah sesuai kena)
         isCBFlag=true;
@@ -1344,6 +1385,7 @@ function kalkulasi(){
       disc:c.disc, bayar:c.bayar, menang:win,
       cocok:ok, dp:c.dp, prizeGrup:pg,
       isPrize:!!c.isPrize,
+      isBBC:!!c.isBBC, bbGrup,
       isCB:isCBFlag, isCB2D:isCB2DFlag, isCN:isCNFlag, isCB4D:isCB4DFlag,
       kena, hadiah,
       keiAmt:c.keiAmt||0
@@ -1386,6 +1428,7 @@ function kalkulasi(){
         if(r.isCB&&r.kena)   extraLbl=' ('+r.kena+' digit)';
         if(r.isCB2D&&r.kena) extraLbl=' ('+r.kena+' hit)';
         if(r.isCN&&r.kena)   extraLbl=' ('+r.kena+' posisi)';
+        if(r.isBBC&&r.bbGrup)extraLbl=r.bbGrup==="TEPAT"?' (Tepat)':' (Acak)';
         statusBadge='<span class="badge bw">MENANG'+esc(extraLbl)+'</span>';
       }
     } else {
@@ -1628,11 +1671,13 @@ function renderRef(){
   html+=block('HADIAH DISKON — HOKI DRAW 5D',['HADIAH','KALI','DISKON'],[
     ['5D','x50.000','38%'],['4D','x7.000','20%'],['3D','x750','20%'],['2D','x75','20%'],
   ]);
-  html+=block('HADIAH BOLAK BALIK — KECUALI HOKI DRAW',['HADIAH','TEPAT','ACAK (BB)'],[
-    ['4D','x4.000','x200'],['3D','x400','x100'],['2D','x70','x20'],
+  html+=block('HADIAH BOLAK BALIK — TEPAT & ACAK OTOMATIS (KECUALI HOKI DRAW)',['HADIAH','TEPAT','ACAK','DISKON BB'],[
+    ['4D','x4.000','x200','66.5%'],['3D','x400','x100','59.5%'],['2D','x70','x20','29.5%'],
+    ['Varian','BB Diskon: bayar dipotong diskon','BB Tidak Diskon: bayar penuh','—'],
   ]);
-  html+=block('HADIAH BOLAK BALIK — HOKI DRAW 5D',['HADIAH','TEPAT','ACAK (BB)'],[
-    ['5D','x50.000','x350'],['4D','x5.000','x180'],['3D','x500','x75'],['2D','x80','x15'],
+  html+=block('HADIAH BOLAK BALIK — HOKI DRAW 5D (TEPAT & ACAK OTOMATIS)',['HADIAH','TEPAT','ACAK','DISKON BB'],[
+    ['5D','x50.000','x350','38%'],['4D','x5.000','x180','20%'],['3D','x500','x75','20%'],['2D','x80','x15','20%'],
+    ['Varian','BB Diskon: bayar dipotong diskon','BB Tidak Diskon: bayar penuh','—'],
   ]);
   html+=block('COLOK BEBAS — 1 DIGIT PILIH (Kategori Otomatis)',['KEMUNCULAN DIGIT DI RESULT','HADIAH','DISKON'],[
     ['1x muncul','x1.5','6%'],['2x muncul','x3','6%'],['3x muncul','x4.5','6%'],['4x muncul','x6','6%'],
