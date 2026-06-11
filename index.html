@@ -141,6 +141,20 @@ select option{background:#0d1829;color:var(--text1);}
 .hint-auto{font-size:.62rem;color:var(--green);margin-top:3px;line-height:1.4;font-style:italic;}
 .err-msg{font-size:.65rem;color:var(--red);font-weight:500;margin-top:5px;display:none;padding:4px 9px;background:var(--red-dim);border-radius:4px;line-height:1.4;}
 .err-msg.show{display:block;}
+.nearmiss-box{
+  background:rgba(245,166,35,.06);border:1px solid rgba(245,166,35,.25);
+  border-radius:var(--rs);padding:11px 13px;margin:6px 0 12px;
+  font-size:.74rem;line-height:1.65;color:var(--text1);
+}
+.copy-btn{
+  margin-top:9px;display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;background:var(--amber-dim);
+  border:1px solid rgba(245,166,35,.35);color:var(--amber);
+  border-radius:6px;font-size:.66rem;font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;font-family:var(--font);
+}
+.copy-btn:hover{background:rgba(245,166,35,.18);}
+.copy-btn.ok{background:var(--green-dim);border-color:rgba(52,209,122,.4);color:var(--green);}
 .rm-btn{
   width:26px;height:26px;background:transparent;border:1px solid var(--border);
   color:var(--text3);border-radius:5px;cursor:pointer;
@@ -597,13 +611,13 @@ function hitung(jenis, bet, pas){
     menangTepat:bet*x.t, menangAcak:bet*x.b, menang:bet*x.t};};
 
   // KEI dari BAYAR (TT / 5050 / SH / KK2)
-  // kei negatif → user bayar lebih → keiAmt ditambahkan ke bayar
-  // menang = bet + (bayar + keiAmt)
+  // FIX BUG: kei dipakai DENGAN TANDA ASLINYA (sebelumnya Math.abs membuat
+  // kei -3% justru MENAMBAH hadiah). Referensi: "Kei -3% dari Bayar".
+  // menang = bet + bayar + round(bayar × kei)  — kei negatif mengurangi
   const fromKei = cfg=>{
     const d=dk(cfg.d||0), b=bet-d;
-    const keiAmt=Math.round(b*Math.abs(cfg.kei||0));
-    const totalBayar=b+keiAmt;
-    return{disc:d,bayar:b,menang:Math.round(bet+totalBayar),dp:cfg.d||0,keiAmt,totalBayar};
+    const keiAmt=Math.round(b*(cfg.kei||0));
+    return{disc:d,bayar:b,menang:Math.round(bet+b+keiAmt),dp:cfg.d||0,keiAmt};
   };
 
   // KEI dari BET (DASAR — berbeda dari TT/5050/SH/KK2)
@@ -711,12 +725,16 @@ function cocokStandard(res, nom, jenis, pos){
   const r2dp=r.slice(0,2);
   const r2tg=rl>=4?r.slice(rl-3,rl-1):"";
 
-  // ── DASAR: berdasarkan PENJUMLAHAN 2 digit terakhir result (mod 10 jika >= 10) ──
+  // ── DASAR: berdasarkan PENJUMLAHAN 2 digit terakhir result ──
+  // FIX BUG: jika jumlah > 9, digit-digitnya DIJUMLAHKAN ULANG
+  // (15 → 1+5 = 6), BUKAN mod 10 (15 → 5). Maks 9+9=18 → 1+8=9,
+  // jadi satu kali reduksi cukup.
   // Tidak butuh input nomor, pengecekan dari result saja
   if(jenis.startsWith("DASAR_")){
     if(r2.length<2) return false;
     const d1=parseInt(r2[0],10), d2=parseInt(r2[1],10);
-    let sum=(d1+d2)%10; // reduksi ke 1 digit
+    let sum=d1+d2;
+    if(sum>9) sum=Math.floor(sum/10)+(sum%10); // 15 → 1+5 = 6
     const sub=jenis.slice(6);
     if(sub==="BESAR")  return sum>=5;
     if(sub==="KECIL")  return sum<=4;
@@ -815,10 +833,25 @@ function cocokStandard(res, nom, jenis, pos){
     return false;
   }
 
-  // ── KOMBINASI — FIX: cek 3 digit terakhir result ──
+  // ── KOMBINASI — FIX TOTAL: tebak sifat 2 POSISI berbeda ──
+  // Struktur ABCD: A=AS B=KOP C=KEPALA D=EKOR
+  // Sifat: Kecil 0-4, Besar 5-9, Ganjil/Genap dari paritas digit
+  // n   = tebakan 1 (misal "AS_KECIL"), pos = tebakan 2 (misal "KOP_GENAP")
+  // Menang HANYA jika KEDUA tebakan benar
   if(jenis==="KOMP"){
-    if(n.length<2) return false;
-    return perm(n.split('')).includes(r3);
+    if(!n||!pos||r4.length<4) return false;
+    const idxMap={AS:0,KOP:1,KEPALA:2,EKOR:3};
+    const cekSifat=pilih=>{
+      const [p,s]=String(pilih).toUpperCase().split('_');
+      const i=idxMap[p]; if(i===undefined) return false;
+      const dg=parseInt(r4[i],10); if(isNaN(dg)) return false;
+      if(s==="BESAR")  return dg>=5;
+      if(s==="KECIL")  return dg<=4;
+      if(s==="GANJIL") return dg%2===1;
+      if(s==="GENAP")  return dg%2===0;
+      return false;
+    };
+    return cekSifat(n)&&cekSifat(pos);
   }
 
   // ── TT / 5050 ──────────────────────────────────────────────
@@ -1010,6 +1043,13 @@ const POS_CJ=[
   {v:'EKOR',  l:'EKOR (Satuan — digit ke-4)'}
 ];
 
+// KOMBINASI: 4 posisi × 4 sifat = 16 pilihan per tebakan
+// Kecil = 0-4, Besar = 5-9, Ganjil/Genap = paritas digit
+const KOMBO_OPS=[];
+['AS','KOP','KEPALA','EKOR'].forEach(p=>
+  ['BESAR','KECIL','GANJIL','GENAP'].forEach(s=>
+    KOMBO_OPS.push({v:p+'_'+s, l:p+' '+s.charAt(0)+s.slice(1).toLowerCase()})));
+
 const BETTING_RULES = {
   DISC_4D:{t:'angka',d:4,ph:'Tepat 4 digit (misal 1234)'},
   DISC_3D:{t:'angka',d:3,ph:'Tepat 3 digit (misal 234)'},
@@ -1087,8 +1127,8 @@ const BETTING_RULES = {
   KK2:{t:'dropdown',lbl:'Tipe',opts:[
     {v:'KEMBANG',l:'Kembang (kecil ke besar)'},{v:'KEMPIS',l:'Kempis (besar ke kecil)'},{v:'KEMBAR',l:'Kembar (sama)'}
   ], posisi:POS_SH_KK2},
-  // KOMP — FIX: 3 digit, cek 3 digit terakhir result
-  KOMP:{t:'angka',d:3,ph:'3 digit — menang jika 3 digit terakhir result adalah salah satu susunannya'},
+  // KOMP — FIX TOTAL: tebak sifat (Besar/Kecil/Ganjil/Genap) di 2 posisi berbeda
+  KOMP:{t:'dropdown',lbl:'Tebakan 1',opts:KOMBO_OPS,posisi:KOMBO_OPS,posLbl:'Tebakan 2'},
 };
 
 function getRule(j){ return BETTING_RULES[j]||{t:'angka',d:null,ph:'Nomor'}; }
@@ -1160,13 +1200,13 @@ function updateRowUI(id){
       '</div>';
   }
 
-  // Dropdown posisi (CJ, SH, KK2)
+  // Dropdown posisi (CJ, SH, KK2) / tebakan 2 (KOMP)
   if(rule.posisi){
     const posOpts=rule.posisi.map(o=>'<option value="'+esc(o.v)+'">'+esc(o.l)+'</option>').join('');
     html+=
       '<div>'+
-        '<span class="inp-lbl">Posisi</span>'+
-        '<select class="rpos" id="rpos'+id+'"><option value="">— Pilih Posisi —</option>'+posOpts+'</select>'+
+        '<span class="inp-lbl">'+esc(rule.posLbl||'Posisi')+'</span>'+
+        '<select class="rpos" id="rpos'+id+'"><option value="">— Pilih —</option>'+posOpts+'</select>'+
       '</div>';
   }
 
@@ -1201,14 +1241,25 @@ function validateRow(id){
     const val=rnEl?rnEl.value:'';
     if(!val) msg='Nomor wajib diisi'+(rule.d?' (tepat '+rule.d+' digit)':'');
     else if(rule.d&&val.length!==rule.d) msg='Harus tepat '+rule.d+' digit — sekarang '+val.length+' digit';
+    // FIX BUG: CB2D & CN wajib digit BERBEDA semua.
+    // Tanpa cek ini, input "77"/"777" lolos dan menghasilkan kategori
+    // kemenangan di luar tabel hadiah (kena 6/8 → hadiah 0 tapi badge MENANG).
+    else if((j==='CB2D'||j==='CN')&&new Set(val.split('')).size!==val.length)
+      msg='Semua digit harus BERBEDA (contoh salah: '+val+')';
   }
   if(!msg&&rule.posisi){
     const posEl=document.getElementById("rpos"+id);
-    if(posEl&&!posEl.value) msg='Silakan pilih posisi (Depan/Tengah/Belakang)';
+    if(posEl&&!posEl.value) msg='Silakan pilih '+(rule.posLbl||'posisi');
   }
   if(!msg&&rule.t==='dropdown'&&rule.opts){
     const subEl=document.getElementById("rsub"+id);
     if(subEl&&!subEl.value) msg='Silakan pilih '+(rule.lbl||'tipe');
+  }
+  // KOMBINASI: kedua tebakan wajib di POSISI berbeda (AS/KOP/KEPALA/EKOR)
+  if(!msg&&j==='KOMP'){
+    const t1=getRowNomor(id,j), t2=getRowPosisi(id);
+    if(t1&&t2&&t1.split('_')[0]===t2.split('_')[0])
+      msg='Kedua tebakan harus di POSISI BERBEDA (AS/KOP/KEPALA/EKOR)';
   }
   if(!msg&&bet<=0) msg='Nominal bet belum diisi';
   if(errEl){ errEl.textContent=msg; errEl.className=msg?'err-msg show':'err-msg'; }
@@ -1273,7 +1324,30 @@ function onPasaranChange(){
 // ═══════════════════════════════════════════════════════════════
 const lastCalc={bet:0,disc:0,bayar:0,menang:0,profit:0,pasaran:'',result:''};
 
+// ── SALIN JAWABAN — teks siap kirim ke member (clipboard + fallback) ──
+let csAnswers=[];
+function salinJawaban(i,btn){
+  const txt=csAnswers[i]||'';
+  const done=()=>{
+    const old=btn.innerHTML;
+    btn.classList.add('ok'); btn.innerHTML='&#10003; Tersalin! Tinggal paste ke chat member';
+    setTimeout(()=>{ btn.classList.remove('ok'); btn.innerHTML=old; },2000);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
+  } else fallbackCopy(txt,done);
+}
+function fallbackCopy(txt,done){
+  const ta=document.createElement('textarea');
+  ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }
+  catch(e){ alert('Gagal menyalin otomatis. Salin manual:\n\n'+txt); }
+  document.body.removeChild(ta);
+}
+
 function kalkulasi(){
+  csAnswers=[];
   const res=document.getElementById("inResult").value.trim();
   const pas=document.getElementById("inPasaran").value;
 
@@ -1337,6 +1411,19 @@ function kalkulasi(){
     const ok=isObj?cocokResult.cocok:cocokResult;
     let pg=isObj?cocokResult.prizeGrup:getPrizeGrup(j);
 
+    // Deteksi "near miss": jenis non-Prize (patokan HANYA Prize 1) yang kalah,
+    // tapi nomornya sebenarnya muncul di Prize 2 / Prize 3.
+    // Dipakai untuk penjelasan ke member + tombol Salin Jawaban.
+    let nearMiss=null, nearVal='';
+    if(!ok && isPrize123(pas) && (j.startsWith('DISC_')||j.startsWith('FULL_')||j.startsWith('BB_'))){
+      const prNM=parseResult123(res);
+      if(prNM.valid){
+        const cekG=g=>{const c2=cocokStandard(g,nom,j,pos);return(typeof c2==='object'&&c2!==null)?c2.cocok:c2;};
+        if(cekG(prNM.p2)){ nearMiss='Prize 2'; nearVal=prNM.p2; }
+        else if(cekG(prNM.p3)){ nearMiss='Prize 3'; nearVal=prNM.p3; }
+      }
+    }
+
     let win=0;
     let kena=isObj?cocokResult.kena:undefined;
     let bbGrup=isObj?cocokResult.bbGrup:undefined;
@@ -1386,6 +1473,7 @@ function kalkulasi(){
       cocok:ok, dp:c.dp, prizeGrup:pg,
       isPrize:!!c.isPrize,
       isBBC:!!c.isBBC, bbGrup,
+      nearMiss, nearVal,
       isCB:isCBFlag, isCB2D:isCB2DFlag, isCN:isCNFlag, isCB4D:isCB4DFlag,
       kena, hadiah,
       keiAmt:c.keiAmt||0
@@ -1519,9 +1607,16 @@ function kalkulasi(){
       '<div style="margin-top:10px;margin-bottom:8px;font-size:.75rem;font-weight:700;color:var(--red);">'+
         'Taruhan yang belum beruntung ('+losRows.length+' tiket):'+
       '</div>';
+    const pasLbl=document.getElementById("inPasaran").selectedOptions[0].text;
     losRows.forEach(r=>{
       let ket='';
-      if(isPas123&&r.prizeGrup){
+      if(r.nearMiss){
+        const prNM=parseResult123(res);
+        ket='tidak menang karena patokan jenis taruhan ini adalah <strong>Prize 1</strong> '+
+            '(<span class="ef mono">'+esc(prNM.p1)+'</span>), walaupun nomornya muncul di '+
+            '<strong style="color:var(--amber)">'+esc(r.nearMiss)+'</strong> '+
+            '(<span class="ef mono">'+esc(r.nearVal)+'</span>).';
+      } else if(isPas123&&r.prizeGrup){
         const grpNum=r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
         ket='tidak cocok dengan hasil <strong>'+esc(r.prizeGrup)+'</strong> (grup '+grpNum+' result).';
       } else if(isPas123){
@@ -1534,6 +1629,28 @@ function kalkulasi(){
         '<div class="exbox" style="margin-bottom:6px;">'+
           '- <strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+ket+
         '</div>';
+
+      // Box penjelasan + tombol Salin Jawaban (kasus near-miss Prize 2/3)
+      if(r.nearMiss){
+        const prNM=parseResult123(res);
+        const txt=
+          'Halo bosku 🙏 izin menjelaskan hasil taruhan '+r.jenis+' nomor '+r.nomor+' di pasaran '+pasLbl+'.\n\n'+
+          'Result pasaran ini terdiri dari 3 baris hadiah:\n'+
+          '• Prize 1 : '+prNM.p1+'\n'+
+          '• Prize 2 : '+prNM.p2+'\n'+
+          '• Prize 3 : '+prNM.p3+'\n\n'+
+          'Sesuai ketentuan, semua taruhan jenis Full / Diskon / Bolak-Balik (selain jenis PRIZE) hanya berpatokan pada PRIZE 1 (baris pertama), yaitu '+prNM.p1+'.\n\n'+
+          'Nomor bosku ('+r.nomor+') memang muncul di '+r.nearMiss+' ('+r.nearVal+'), namun karena patokan jenis taruhan ini hanya Prize 1, tiket dinyatakan TIDAK MENANG. Ini juga alasan indeks hadiah jenis Full/Diskon/BB dipasang lebih tinggi dibanding jenis Prize — peluang menangnya dihitung dari 1 baris saja, bukan 3 baris.\n\n'+
+          'Jika bosku ingin nomor dihitung terhadap Prize 1, 2, DAN 3 sekaligus, silakan gunakan jenis taruhan "PRIZE" (Prize — 4D/3D/2D) pada pasaran ini; hadiahnya otomatis menyesuaikan baris mana yang kena. Terima kasih bosku 🙏';
+        const ci=csAnswers.push(txt)-1;
+        exHtml+=
+          '<div class="nearmiss-box">'+
+            '<strong style="color:var(--amber)">&#8505; Kenapa tidak menang padahal nomor keluar di '+esc(r.nearMiss)+'?</strong><br>'+
+            'Semua jenis taruhan <strong>Full / Diskon / Bolak-Balik</strong> pada pasaran Prize 123 hanya berpatokan pada <strong>Prize 1</strong> — baris kedua dan ketiga bukan patokan jenis taruhan ini. '+
+            'Nomor <span class="ef mono">'+esc(r.nomor)+'</span> muncul di '+esc(r.nearMiss)+' (<span class="ef mono">'+esc(r.nearVal)+'</span>), sehingga hanya menang jika memakai jenis taruhan <strong>PRIZE</strong>.'+
+            '<br><button class="copy-btn" onclick="salinJawaban('+ci+',this)">&#128203; Salin Jawaban untuk Member</button>'+
+          '</div>';
+      }
     });
   }
 
@@ -1699,7 +1816,7 @@ function renderRef(){
   html+=block('COLOK JITU / SHIO / KOMBINASI',['JENIS','KALI','DISKON'],[
     ['Colok Jitu (pilih digit + posisi)','x8','6%'],
     ['Shio','x9.5','5%'],
-    ['Kombinasi (3 digit — cek 3 digit terakhir result)','x2.6','8%'],
+    ['Kombinasi (tebak Besar/Kecil/Ganjil/Genap di 2 posisi AS/KOP/KEPALA/EKOR — keduanya wajib benar)','x2.6','8%'],
   ]);
   html+=block('TARUHAN KEI-BASED (Sistem 1:1)',['JENIS','KEI','DISKON'],[
     ['Tengah / Tepi','Kei -3% dari Bayar','2%'],
