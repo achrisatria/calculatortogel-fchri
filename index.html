@@ -99,7 +99,6 @@ input:focus,select:focus{border-color:var(--accent);}
 input::placeholder{color:var(--text3);}
 select option{background:#0d1829;color:var(--text1);}
 .res-inp{font-family:var(--mono)!important;font-size:1.3rem!important;text-align:center;letter-spacing:6px;color:var(--amber)!important;font-weight:700;}
-/* Badge pasaran Prize123 */
 .prize123-badge{
   display:inline-flex;align-items:center;gap:5px;
   font-size:.62rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
@@ -129,6 +128,7 @@ select option{background:#0d1829;color:var(--text1);}
 .row-mid{display:grid;gap:6px;margin-top:7px;}
 .row-mid.c2{grid-template-columns:1fr 1fr;}
 .row-mid.c1{grid-template-columns:1fr;}
+.row-mid.c3{grid-template-columns:1fr 1fr 1fr;}
 .row-mid.hide{display:none!important;}
 .row-top select,.row-top input,.row-mid select,.row-mid input{
   padding:7px 9px;font-size:.8rem;border-radius:5px;width:100%;
@@ -138,6 +138,7 @@ select option{background:#0d1829;color:var(--text1);}
 .row-top select:focus,.row-top input:focus,.row-mid select:focus,.row-mid input:focus{border-color:var(--accent);}
 .inp-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-weight:500;margin-bottom:3px;display:block;}
 .hint-msg{font-size:.62rem;color:var(--text3);margin-top:3px;line-height:1.4;}
+.hint-auto{font-size:.62rem;color:var(--green);margin-top:3px;line-height:1.4;font-style:italic;}
 .err-msg{font-size:.65rem;color:var(--red);font-weight:500;margin-top:5px;display:none;padding:4px 9px;background:var(--red-dim);border-radius:4px;line-height:1.4;}
 .err-msg.show{display:block;}
 .rm-btn{
@@ -226,6 +227,9 @@ optgroup option{background:#0d1829;color:var(--text1);font-weight:400;font-size:
 .htable .hkei-neg{color:var(--red);font-weight:600;font-family:var(--mono);font-size:.8rem;}
 .htable .hkei-pos{color:var(--green);font-weight:600;font-family:var(--mono);font-size:.8rem;}
 .htable .hnote {font-size:.7rem;color:var(--text3);}
+/* Sembunyikan kolom Diskon jika semua taruhan tanpa diskon */
+.rtable.no-disc th.col-disc,
+.rtable.no-disc td.col-disc { display:none; }
 </style>
 </head>
 <body>
@@ -319,7 +323,7 @@ optgroup option{background:#0d1829;color:var(--text1);font-weight:400;font-size:
             </optgroup>
           </select>
           <div id="prize123Badge" style="display:none;">
-            <div class="prize123-badge">★ PASARAN PRIZE 1-2-3 — Format result: 1234,5678,9012</div>
+            <div class="prize123-badge">PASARAN PRIZE 1-2-3 — Format result: 1234,5678,9012</div>
           </div>
         </div>
         <div class="fg">
@@ -344,10 +348,10 @@ optgroup option{background:#0d1829;color:var(--text1);font-weight:400;font-size:
         </div>
         <div class="tp-pane on" id="tp-hasil">
           <div class="twrap">
-            <table class="rtable">
-              <thead><tr>
+            <table class="rtable" id="hasilTable">
+              <thead id="hasilHead"><tr>
                 <th>#</th><th>Jenis</th><th>Nomor</th>
-                <th>Bet</th><th>Diskon</th><th>Bayar</th>
+                <th>Bet</th><th class="col-disc">Diskon</th><th>Bayar</th>
                 <th>Menang</th><th>Status</th>
               </tr></thead>
               <tbody id="hasilBody">
@@ -374,27 +378,13 @@ const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 
 // ═══════════════════════════════════════════════════════════════
 // PRIZE123 CONFIG
-// Pasaran yang menggunakan sistem Prize 1-2-3
-// Format result: "XXXX,XXXX,XXXX"
-// Grup 1 = Prize 1 | Grup 2 = Prize 2 | Grup 3 = Prize 3
-// Taruhan NON-PRIZE pada pasaran ini → patokan = grup 1 (Prize 1)
 // ═══════════════════════════════════════════════════════════════
 const PRIZE123_PASARAN = new Set([
   "TOTO_CAMBODIA","POIPET","HUAHIN","SYDNEY","SINGAPORE",
   "MAGNUM4D","NEVADA","BANGKOK_POOLS","BRUNEI_POOLS","CHELSEA_POOLS","HONGKONG"
 ]);
-
-// Nama tampilan pasaran Prize123
-const PRIZE123_NAMES = {
-  TOTO_CAMBODIA:"TOTO CAMBODIA LIVE", POIPET:"POIPET LOTTERY",
-  HUAHIN:"HUAHIN LOTTERY", SYDNEY:"SYDNEY LOTTO", SINGAPORE:"SINGAPORE",
-  MAGNUM4D:"MAGNUM4D", NEVADA:"NEVADA", BANGKOK_POOLS:"BANGKOK POOLS",
-  BRUNEI_POOLS:"BRUNEI POOLS", CHELSEA_POOLS:"CHELSEA POOLS", HONGKONG:"HONGKONG LOTTO"
-};
-
 function isPrize123(pas){ return PRIZE123_PASARAN.has(pas); }
 
-// Parse result Prize123: "1234,5678,9012" → {p1, p2, p3, valid}
 function parseResult123(res){
   const parts = res.trim().split(",");
   if(parts.length !== 3) return {valid:false};
@@ -403,21 +393,18 @@ function parseResult123(res){
   return {p1:clean[0], p2:clean[1], p3:clean[2], valid:true};
 }
 
-// Ambil label Prize dari jenis taruhan
 function getPrizeGrup(jenis){
-  // Jenis lama (P1_/P2_/P3_) sudah tidak dipakai di dropdown
-  // tapi tetap disupport untuk backward compat
   if(jenis.startsWith("P1_")) return "Prize 1";
   if(jenis.startsWith("P2_")) return "Prize 2";
   if(jenis.startsWith("P3_")) return "Prize 3";
-  // Jenis baru: PRIZE_4D/3D/2D — prize ditentukan saat cocok()
-  // Sini return 'PRIZE' sebagai penanda, nanti diisi cocok()
   if(jenis.startsWith("PRIZE_")) return "PRIZE";
   return null;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // CONFIG DATA HADIAH
+// CB, CB2D, CN: format {d, hadiah:{kena:multiplier}}
+// CB4D: tetap array (2 kategori berbeda, user pilih)
 // ═══════════════════════════════════════════════════════════════
 const H = {
   UMUM:{
@@ -427,31 +414,19 @@ const H = {
     P1:{"4D":{h:6500},"3D":{h:650},"2D":{h:70},"2DDP":{h:70},"2DTG":{h:70}},
     P2:{"4D":{h:2100},"3D":{h:210},"2D":{h:20},"2DDP":{h:20},"2DTG":{h:20}},
     P3:{"4D":{h:1100},"3D":{h:110},"2D":{h:8}, "2DDP":{h:8}, "2DTG":{h:8}},
-    CB:[
-      {lbl:"Colok Bebas (1 Digit) x1.5",h:1.5,d:0.06},
-      {lbl:"Colok Bebas (2 Digit) x3",  h:3,  d:0.06},
-      {lbl:"Colok Bebas (3 Digit) x4.5",h:4.5,d:0.06},
-      {lbl:"Colok Bebas (4 Digit) x6",  h:6,  d:0.06}
-    ],
-    CB2D:[
-      {lbl:"CB 2D (2 Digit) x7",  h:7,  d:0.10},
-      {lbl:"CB 2D (3 Digit) x11", h:11, d:0.10},
-      {lbl:"CB 2D (4 Digit) x18", h:18, d:0.10},
-      {lbl:"CB 2D (5 Digit) x200",h:200,d:0.10}
-    ],
-    CN:[
-      {lbl:"Colok Naga (3 Digit) x23", h:23, d:0.10},
-      {lbl:"Colok Naga (4 Digit) x35", h:35, d:0.10},
-      {lbl:"Colok Naga (5 Digit) x125",h:125,d:0.10}
-    ],
-    CJ:{h:8,d:0.06},SHIO:{h:9.5,d:0.05},KOMP:{h:2.6,d:0.08},
-    TT:{d:0.02,kei:-0.03},"5050":{d:0.02,kei:-0.03},
-    SH:{d:0.02,kei:-0.03},KK2:{d:0.02,kei:-0.03},
+    // CB: user pilih 1 digit; kategori otomatis dari jumlah kemunculan di result
+    CB:{d:0.06, hadiah:{1:1.5, 2:3, 3:4.5, 4:6}},
+    // CB2D: user pilih 2 digit; kategori otomatis dari total kemunculan keduanya
+    CB2D:{d:0.10, hadiah:{2:7, 3:11, 4:18}},
+    // CN: user pilih 3 digit; kategori otomatis dari jumlah posisi kena
+    CN:{d:0.10, hadiah:{3:23, 4:35}},
+    CJ:{h:8,d:0.06}, SHIO:{h:9.5,d:0.05}, KOMP:{h:2.6,d:0.08},
+    TT:{d:0.02,kei:-0.03}, "5050":{d:0.02,kei:-0.03},
+    SH:{d:0.02,kei:-0.03}, KK2:{d:0.02,kei:-0.03},
     DASAR:{d:0.02,sub:{BESAR:{kei:-0.25},KECIL:{kei:0.10},GENAP:{kei:0.10},GANJIL:{kei:-0.25}}}
   },
-  // Pasaran Prize123 semua pakai config UMUM (hadiah sama)
-  // Logika match-nya yang berbeda (cek per grup P1/P2/P3)
-  TOTO_CAMBODIA: null, POIPET:null, HUAHIN:null, SYDNEY:null,
+  // Prize123 pakai config UMUM
+  TOTO_CAMBODIA:null, POIPET:null, HUAHIN:null, SYDNEY:null,
   SINGAPORE:null, MAGNUM4D:null, NEVADA:null, BANGKOK_POOLS:null,
   BRUNEI_POOLS:null, CHELSEA_POOLS:null, HONGKONG:null,
   TOTOMALI:{
@@ -468,116 +443,112 @@ const H = {
     FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
     DISC:{"5D":{h:50000,d:0.38},"4D":{h:7000,d:0.20},"3D":{h:750,d:0.20},"2D":{h:75,d:0.20},"2DDP":{h:75,d:0.20},"2DTG":{h:75,d:0.20}},
     BB:{"5D":{t:50000,b:350},"4D":{t:5000,b:180},"3D":{t:500,b:75},"2D":{t:80,b:15}},
-    CB:[
-      {lbl:"Colok Bebas (1 Digit) x1.5",h:1.5,d:0.06},
-      {lbl:"Colok Bebas (2 Digit) x3",  h:3,  d:0.06},
-      {lbl:"Colok Bebas (3 Digit) x4.5",h:4.5,d:0.06},
-      {lbl:"Colok Bebas (4 Digit) x6",  h:6,  d:0.06}
-    ],
-    CB2D:[
-      {lbl:"CB 2D (2 Digit) x4",  h:4,  d:0.10},
-      {lbl:"CB 2D (3 Digit) x6",  h:6,  d:0.10},
-      {lbl:"CB 2D (4 Digit) x20", h:20, d:0.10},
-      {lbl:"CB 2D (5 Digit) x200",h:200,d:0.10}
-    ],
+    CB:{d:0.06, hadiah:{1:1.5, 2:3, 3:4.5, 4:6, 5:6}},
+    CB2D:{d:0.10, hadiah:{2:4, 3:6, 4:20, 5:200}},
     CB4D:[
       {lbl:"CB 4D (4 Digit) x50", h:50, d:0.10},
       {lbl:"CB 4D (5 Digit) x200",h:200,d:0.10}
     ],
-    CN:[
-      {lbl:"Colok Naga (3 Digit) x12", h:12, d:0.10},
-      {lbl:"Colok Naga (4 Digit) x30", h:30, d:0.10},
-      {lbl:"Colok Naga (5 Digit) x125",h:125,d:0.10}
-    ],
-    CJ:{h:8,d:0.06},SHIO:{h:9.5,d:0.05},KOMP:{h:2.6,d:0.08},
-    TT:{d:0.02,kei:-0.03},"5050":{d:0.02,kei:-0.03},
-    SH:{d:0.02,kei:-0.03},KK2:{d:0.02,kei:-0.03},
+    CN:{d:0.10, hadiah:{3:12, 4:30, 5:125}},
+    CJ:{h:8,d:0.06}, SHIO:{h:9.5,d:0.05}, KOMP:{h:2.6,d:0.08},
+    TT:{d:0.02,kei:-0.03}, "5050":{d:0.02,kei:-0.03},
+    SH:{d:0.02,kei:-0.03}, KK2:{d:0.02,kei:-0.03},
     DASAR:{d:0.02,sub:{BESAR:{kei:-0.25},KECIL:{kei:0.10},GENAP:{kei:0.10},GANJIL:{kei:-0.25}}}
   }
 };
 
-// Resolve config pasaran (Prize123 pakai config UMUM)
 function getConfig(pas){ return H[pas] || H.UMUM; }
+
+// ═══════════════════════════════════════════════════════════════
+// SHIO MAPPING — sesuai tabel referensi
+// 2 digit terakhir result → shio
+// ═══════════════════════════════════════════════════════════════
+const SHIO_MAP = {
+  KUDA:    [1,13,25,37,49,61,73,85,97],
+  ULAR:    [2,14,26,38,50,62,74,86,98],
+  NAGA:    [3,15,27,39,51,63,75,87,99],
+  KELINCI: [4,16,28,40,52,64,76,88,0],  // 00 → 0
+  HARIMAU: [5,17,29,41,53,65,77,89],
+  KERBAU:  [6,18,30,42,54,66,78,90],
+  TIKUS:   [7,19,31,43,55,67,79,91],
+  BABI:    [8,20,32,44,56,68,80,92],
+  ANJING:  [9,21,33,45,57,69,81,93],
+  AYAM:    [10,22,34,46,58,70,82,94],
+  MONYET:  [11,23,35,47,59,71,83,95],
+  KAMBING: [12,24,36,48,60,72,84,96]
+};
 
 // ═══════════════════════════════════════════════════════════════
 // JENIS TARUHAN PER PASARAN
 // ═══════════════════════════════════════════════════════════════
 function getJenis(pas){
-  // Prize123 pasaran pakai config UMUM (jenis taruhan sama)
   const resolvedPas = isPrize123(pas) ? 'UMUM' : pas;
   const P = getConfig(resolvedPas);
   const groups = [];
-
-  // ── GUARD: 5D HANYA boleh muncul di pasaran HOKI5D ─────────
-  // Filter kunci digit yang diizinkan per pasaran
   const allow5D = (pas === "HOKI5D");
-  const digitKeys = allow5D
-    ? ['5D','4D','3D','2D','2DDP','2DTG']
-    : ['4D','3D','2D','2DDP','2DTG'];
-  const bbKeys = allow5D
-    ? ['5D','4D','3D','2D']
-    : ['4D','3D','2D'];
+  const digitKeys = allow5D ? ['5D','4D','3D','2D','2DDP','2DTG'] : ['4D','3D','2D','2DDP','2DTG'];
+  const bbKeys   = allow5D ? ['5D','4D','3D','2D'] : ['4D','3D','2D'];
 
-  const discItems = [];
+  // DISKON
   const discLbl = {'5D':'5D Diskon','4D':'4D Diskon','3D':'3D Diskon','2D':'2D Belakang — Diskon','2DDP':'2D Depan — Diskon','2DTG':'2D Tengah — Diskon'};
-  digitKeys.forEach(k=>{
-    if(!Object.keys(P.DISC||{}).includes(k)) return;
-    discItems.push({v:'DISC_'+k,l:discLbl[k]});
-  });
-  if(discItems.length) groups.push({group:'◆ DISKON',items:discItems});
+  const discItems = [];
+  digitKeys.forEach(k=>{ if((P.DISC||{})[k]) discItems.push({v:'DISC_'+k, l:discLbl[k]}); });
+  if(discItems.length) groups.push({group:'◆ DISKON', items:discItems});
 
-  const fullItems = [];
+  // FULL
   const fullLbl = {'5D':'5D Full','4D':'4D Full','3D':'3D Full','2D':'2D Belakang — Full','2DDP':'2D Depan — Full','2DTG':'2D Tengah — Full'};
-  digitKeys.forEach(k=>{
-    if(!Object.keys(P.FULL||{}).includes(k)) return;
-    fullItems.push({v:'FULL_'+k,l:fullLbl[k]||k+' Full'});
-  });
-  if(fullItems.length) groups.push({group:'◆ FULL (tanpa diskon)',items:fullItems});
+  const fullItems = [];
+  digitKeys.forEach(k=>{ if((P.FULL||{})[k]) fullItems.push({v:'FULL_'+k, l:fullLbl[k]}); });
+  if(fullItems.length) groups.push({group:'◆ FULL (tanpa diskon)', items:fullItems});
 
+  // BOLAK-BALIK
   const bbItems = [];
-  bbKeys.forEach(k=>{
-    if(!Object.keys(P.BB||{}).includes(k)) return;
-    bbItems.push({v:'BB_'+k,l:k+' BB Tepat'},{v:'BB_'+k+'_B',l:k+' BB Acak (tidak tepat)'});
-  });
-  if(bbItems.length) groups.push({group:'◆ BOLAK-BALIK',items:bbItems});
+  bbKeys.forEach(k=>{ if((P.BB||{})[k]){ bbItems.push({v:'BB_'+k, l:k+' BB Tepat'}); bbItems.push({v:'BB_'+k+'_B', l:k+' BB Acak'}); }});
+  if(bbItems.length) groups.push({group:'◆ BOLAK-BALIK', items:bbItems});
 
+  // PRIZE
   const prizeItems = [];
   if(P.P1){
-    // Dropdown: hanya Prize 4D/3D/2D — sistem otomatis cek P1/P2/P3
-    if(P.P1['4D'])  prizeItems.push({v:'PRIZE_4D',   l:'Prize — 4D'});
-    if(P.P1['3D'])  prizeItems.push({v:'PRIZE_3D',   l:'Prize — 3D'});
-    if(P.P1['2D'])  prizeItems.push({v:'PRIZE_2D',   l:'Prize — 2D Belakang'});
-    if(P.P1['2DDP'])prizeItems.push({v:'PRIZE_2DDP', l:'Prize — 2D Depan'});
-    if(P.P1['2DTG'])prizeItems.push({v:'PRIZE_2DTG', l:'Prize — 2D Tengah'});
+    if(P.P1['4D'])   prizeItems.push({v:'PRIZE_4D',   l:'Prize — 4D'});
+    if(P.P1['3D'])   prizeItems.push({v:'PRIZE_3D',   l:'Prize — 3D'});
+    if(P.P1['2D'])   prizeItems.push({v:'PRIZE_2D',   l:'Prize — 2D Belakang'});
+    if(P.P1['2DDP']) prizeItems.push({v:'PRIZE_2DDP', l:'Prize — 2D Depan'});
+    if(P.P1['2DTG']) prizeItems.push({v:'PRIZE_2DTG', l:'Prize — 2D Tengah'});
   }
-  if(prizeItems.length) groups.push({group:'◆ PRIZE',items:prizeItems});
+  if(prizeItems.length) groups.push({group:'◆ PRIZE', items:prizeItems});
 
+  // COLOK BEBAS — SATU pilihan per jenis; kategori ditentukan OTOMATIS dari result
   const cbItems = [];
-  (P.CB  ||[]).forEach((c,i)=>cbItems.push({v:'CB_'+i,   l:'Colok Bebas '+(i+1)+' Digit'}));
-  (P.CB2D||[]).forEach((c,i)=>cbItems.push({v:'CB2D_'+i, l:'Colok Bebas 2D — '+(i+2)+' Digit'}));
-  (P.CB4D||[]).forEach((c,i)=>cbItems.push({v:'CB4D_'+i, l:'Colok Bebas 4D — '+(i+4)+' Digit'}));
-  if(cbItems.length) groups.push({group:'◆ COLOK BEBAS',items:cbItems});
+  if(P.CB)   cbItems.push({v:'CB',   l:'Colok Bebas'});
+  if(P.CB2D) cbItems.push({v:'CB2D', l:'Colok Bebas 2D'});
+  // CB4D: tetap 2 item karena user memilih berapa digit yang dipasang (4 atau 5)
+  if(P.CB4D) P.CB4D.forEach((x,i)=>cbItems.push({v:'CB4D_'+i, l:x.lbl}));
+  if(cbItems.length) groups.push({group:'◆ COLOK BEBAS', items:cbItems});
 
-  const cnItems = [];
-  (P.CN||[]).forEach((c,i)=>cnItems.push({v:'CN_'+i,l:'Colok Naga '+(i+3)+' Digit'}));
-  if(cnItems.length) groups.push({group:'◆ COLOK NAGA',items:cnItems});
+  // COLOK NAGA — SATU pilihan; kategori otomatis
+  if(P.CN) groups.push({group:'◆ COLOK NAGA', items:[{v:'CN', l:'Colok Naga'}]});
 
+  // COLOK JITU / SHIO / KOMBINASI
   const lainItems = [];
-  if(P.CJ)   lainItems.push({v:'CJ',  l:'Colok Jitu'});
-  if(P.SHIO) lainItems.push({v:'SHIO',l:'Shio'});
-  if(P.KOMP) lainItems.push({v:'KOMP',l:'Kombinasi'});
-  if(lainItems.length) groups.push({group:'◆ COLOK JITU / SHIO / KOMBINASI',items:lainItems});
+  if(P.CJ)   lainItems.push({v:'CJ',   l:'Colok Jitu'});
+  if(P.SHIO) lainItems.push({v:'SHIO', l:'Shio'});
+  if(P.KOMP) lainItems.push({v:'KOMP', l:'Kombinasi'});
+  if(lainItems.length) groups.push({group:'◆ COLOK JITU / SHIO / KOMBINASI', items:lainItems});
 
+  // KEI / DASAR
   const keiItems = [];
-  if(P.TT)      keiItems.push({v:'TT',        l:'Tengah / Tepi'});
-  if(P['5050']) keiItems.push({v:'5050',       l:'50 - 50'});
-  if(P.SH)      keiItems.push({v:'SH',         l:'Silang / Homo'});
-  if(P.KK2)     keiItems.push({v:'KK2',        l:'Kembang / Kempis'});
+  if(P.TT)      keiItems.push({v:'TT',          l:'Tengah / Tepi'});
+  if(P['5050']) keiItems.push({v:'5050',         l:'50 - 50'});
+  if(P.SH)      keiItems.push({v:'SH',           l:'Silang / Homo'});
+  if(P.KK2)     keiItems.push({v:'KK2',          l:'Kembang / Kempis'});
   if(P.DASAR){
-    keiItems.push({v:'DASAR_BESAR',l:'Dasar Besar & Ganjil'});
-    keiItems.push({v:'DASAR_KECIL',l:'Dasar Kecil & Genap'});
+    // 4 pilihan terpisah dengan kei berbeda
+    keiItems.push({v:'DASAR_BESAR',  l:'Dasar — Besar'});
+    keiItems.push({v:'DASAR_GANJIL', l:'Dasar — Ganjil'});
+    keiItems.push({v:'DASAR_KECIL',  l:'Dasar — Kecil'});
+    keiItems.push({v:'DASAR_GENAP',  l:'Dasar — Genap'});
   }
-  if(keiItems.length) groups.push({group:'◆ KEI / DASAR',items:keiItems});
+  if(keiItems.length) groups.push({group:'◆ KEI / DASAR', items:keiItems});
 
   return groups;
 }
@@ -592,28 +563,58 @@ function flatItems(groups){ return groups.flatMap(g=>g.items); }
 
 // ═══════════════════════════════════════════════════════════════
 // CALCULATION ENGINE
+// fromKei  : kei dihitung dari BAYAR (TT/5050/SH/KK2)
+// fromKeiDasar: kei dihitung dari BET (DASAR)
 // ═══════════════════════════════════════════════════════════════
 function hitung(jenis, bet, pas){
   const resolvedPas = isPrize123(pas) ? 'UMUM' : pas;
   const P = getConfig(resolvedPas);
+  const nil = {disc:0,bayar:bet,menang:0,dp:0};
+  const dk  = pct => Math.round(bet*pct);
 
-  // ── GUARD: jenis 5D HANYA valid di pasaran HOKI5D ──────────
-  // Mencegah manipulasi/miskonfigurasi: DISC_5D, FULL_5D, BB_5D,
-  // BB_5D_B di pasaran lain langsung ditolak (menang = 0)
-  const is5D = jenis==="DISC_5D"||jenis==="FULL_5D"||
-               jenis==="BB_5D"||jenis==="BB_5D_B";
-  if(is5D && pas!=="HOKI5D"){
-    return {disc:0,bayar:bet,menang:0,dp:0,invalid:true};
-  }
-  const dk = pct => Math.round(bet*pct);
+  // Guard: 5D HANYA valid di pasaran HOKI5D
+  const is5D = jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_B";
+  if(is5D && pas!=="HOKI5D") return {...nil, invalid:true};
+
   const fromD = k=>{const x=(P.DISC||{})[k];if(!x)return null;const d=dk(x.d||0);return{disc:d,bayar:bet-d,menang:bet*x.h,dp:x.d||0};};
   const fromF = k=>{const x=(P.FULL||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.h,dp:0};};
   const fromBT= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.t,dp:0};};
   const fromBB= k=>{const x=(P.BB||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.b,dp:0};};
-  const fromP = (g,k)=>{const x=(P[g]||{})[k];if(!x)return null;return{disc:0,bayar:bet,menang:bet*x.h,dp:0};};
-  const fromArr=(arr,i)=>{const x=(arr||[])[i];if(!x)return null;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};};
-  const fromKei=cfg=>{const d=dk(cfg.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(bet+b+(b*(cfg.kei||0))),dp:cfg.d||0};};
-  const nil={disc:0,bayar:bet,menang:0,dp:0};
+
+  // KEI dari BAYAR (TT / 5050 / SH / KK2)
+  // kei negatif → user bayar lebih → keiAmt ditambahkan ke bayar
+  // menang = bet + (bayar + keiAmt)
+  const fromKei = cfg=>{
+    const d=dk(cfg.d||0), b=bet-d;
+    const keiAmt=Math.round(b*Math.abs(cfg.kei||0));
+    const totalBayar=b+keiAmt;
+    return{disc:d,bayar:b,menang:Math.round(bet+totalBayar),dp:cfg.d||0,keiAmt,totalBayar};
+  };
+
+  // KEI dari BET (DASAR — berbeda dari TT/5050/SH/KK2)
+  // menang = bet + bayar + round(bet × kei)  — kei bisa positif atau negatif
+  const fromKeiDasar = cfg=>{
+    const d=dk(cfg.d||0), b=bet-d;
+    const keiAmt=Math.round(bet*(cfg.kei||0));
+    return{disc:d,bayar:b,menang:Math.round(bet+b+keiAmt),dp:cfg.d||0,keiAmt};
+  };
+
+  // CB/CB2D/CN: kembalikan disc/bayar saja; menang dihitung di kalkulasi() setelah match
+  if(jenis==="CB"){
+    const x=P.CB;if(!x)return nil;
+    const d=dk(x.d||0);
+    return{disc:d,bayar:bet-d,menang:0,dp:x.d||0,isCB:true};
+  }
+  if(jenis==="CB2D"){
+    const x=P.CB2D;if(!x)return nil;
+    const d=dk(x.d||0);
+    return{disc:d,bayar:bet-d,menang:0,dp:x.d||0,isCB2D:true};
+  }
+  if(jenis==="CN"){
+    const x=P.CN;if(!x)return nil;
+    const d=dk(x.d||0);
+    return{disc:d,bayar:bet-d,menang:0,dp:x.d||0,isCN:true};
+  }
 
   if(jenis==="DISC_5D")  return fromD("5D")||nil;
   if(jenis==="DISC_4D")  return fromD("4D")||nil;
@@ -635,148 +636,139 @@ function hitung(jenis, bet, pas){
   if(jenis==="BB_4D_B")  return fromBB("4D")||nil;
   if(jenis==="BB_3D_B")  return fromBB("3D")||nil;
   if(jenis==="BB_2D_B")  return fromBB("2D")||nil;
-  // PRIZE_x: kembalikan object dengan nilai semua prize
-  // kalkulasi() akan memilih nilai yg benar berdasarkan prizeGrup dari cocok()
-  if(jenis==="PRIZE_4D") return {
-    disc:0,bayar:bet,dp:0,
-    menangP1:bet*(P.P1&&P.P1["4D"]?P.P1["4D"].h:0),
-    menangP2:bet*(P.P2&&P.P2["4D"]?P.P2["4D"].h:0),
-    menangP3:bet*(P.P3&&P.P3["4D"]?P.P3["4D"].h:0),
-    menang:bet*(P.P1&&P.P1["4D"]?P.P1["4D"].h:0), // default P1
-    isPrize:true
-  };
-  if(jenis==="PRIZE_3D") return {
-    disc:0,bayar:bet,dp:0,
-    menangP1:bet*(P.P1&&P.P1["3D"]?P.P1["3D"].h:0),
-    menangP2:bet*(P.P2&&P.P2["3D"]?P.P2["3D"].h:0),
-    menangP3:bet*(P.P3&&P.P3["3D"]?P.P3["3D"].h:0),
-    menang:bet*(P.P1&&P.P1["3D"]?P.P1["3D"].h:0),
-    isPrize:true
-  };
-  if(jenis==="PRIZE_2D") return {
-    disc:0,bayar:bet,dp:0,
-    menangP1:bet*(P.P1&&P.P1["2D"]?P.P1["2D"].h:0),
-    menangP2:bet*(P.P2&&P.P2["2D"]?P.P2["2D"].h:0),
-    menangP3:bet*(P.P3&&P.P3["2D"]?P.P3["2D"].h:0),
-    menang:bet*(P.P1&&P.P1["2D"]?P.P1["2D"].h:0),
-    isPrize:true
-  };
-  if(jenis==="PRIZE_2DDP") return {
-    disc:0,bayar:bet,dp:0,
-    menangP1:bet*(P.P1&&P.P1["2DDP"]?P.P1["2DDP"].h:0),
-    menangP2:bet*(P.P2&&P.P2["2DDP"]?P.P2["2DDP"].h:0),
-    menangP3:bet*(P.P3&&P.P3["2DDP"]?P.P3["2DDP"].h:0),
-    menang:bet*(P.P1&&P.P1["2DDP"]?P.P1["2DDP"].h:0),
-    isPrize:true
-  };
-  if(jenis==="PRIZE_2DTG") return {
-    disc:0,bayar:bet,dp:0,
-    menangP1:bet*(P.P1&&P.P1["2DTG"]?P.P1["2DTG"].h:0),
-    menangP2:bet*(P.P2&&P.P2["2DTG"]?P.P2["2DTG"].h:0),
-    menangP3:bet*(P.P3&&P.P3["2DTG"]?P.P3["2DTG"].h:0),
-    menang:bet*(P.P1&&P.P1["2DTG"]?P.P1["2DTG"].h:0),
-    isPrize:true
-  };
-  if(jenis.startsWith("CB_")&&!jenis.startsWith("CB2D_")&&!jenis.startsWith("CB4D_"))
-    return fromArr(P.CB,+jenis.slice(3))||nil;
-  if(jenis.startsWith("CB2D_")) return fromArr(P.CB2D,+jenis.slice(5))||nil;
-  if(jenis.startsWith("CB4D_")) return fromArr(P.CB4D,+jenis.slice(5))||nil;
-  if(jenis.startsWith("CN_"))   return fromArr(P.CN,  +jenis.slice(3))||nil;
-  if(jenis==="CJ")  {const x=P.CJ;  if(!x)return nil;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
-  if(jenis==="SHIO"){const x=P.SHIO;if(!x)return nil;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
-  if(jenis==="KOMP"){const x=P.KOMP;if(!x)return nil;const d=dk(x.d||0);const b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+
+  // PRIZE: kembalikan semua nilai per prize; kalkulasi() pilih sesuai prizeGrup
+  if(jenis.startsWith("PRIZE_")){
+    const k=jenis.slice(6);
+    return{disc:0,bayar:bet,dp:0,isPrize:true,
+      menangP1:bet*((P.P1||{})[k]?.h||0),
+      menangP2:bet*((P.P2||{})[k]?.h||0),
+      menangP3:bet*((P.P3||{})[k]?.h||0),
+      menang:  bet*((P.P1||{})[k]?.h||0)
+    };
+  }
+
+  // CB4D: tetap array-indexed (Hoki only)
+  if(jenis.startsWith("CB4D_")){
+    const arr=(P.CB4D||[]);
+    const idx=+jenis.slice(5);
+    const x=arr[idx];if(!x)return nil;
+    const d=dk(x.d||0),b=bet-d;
+    return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};
+  }
+
+  if(jenis==="CJ"){const x=P.CJ;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="SHIO"){const x=P.SHIO;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="KOMP"){const x=P.KOMP;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
   if(jenis==="TT")   return P.TT    ?fromKei(P.TT)   :nil;
   if(jenis==="5050") return P["5050"]?fromKei(P["5050"]):nil;
   if(jenis==="SH")   return P.SH    ?fromKei(P.SH)   :nil;
   if(jenis==="KK2")  return P.KK2   ?fromKei(P.KK2)  :nil;
+
   if(jenis.startsWith("DASAR_")){
     const sub=jenis.slice(6);
-    const D=P.DASAR; if(!D)return nil;
+    const D=P.DASAR;if(!D)return nil;
     const kei=(D.sub[sub]||{}).kei||0;
-    return fromKei({d:D.d,kei});
+    return fromKeiDasar({d:D.d,kei});
   }
   return nil;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MATCH ENGINE — STANDAR (pasaran biasa / 1 result)
+// MATCH ENGINE — permutasi
 // ═══════════════════════════════════════════════════════════════
 function perm(arr){
-  if(arr.length<=1)return[arr.join('')];
+  if(arr.length<=1) return[arr.join('')];
   const r=[];
   arr.forEach((c,i)=>{const s=[...arr.slice(0,i),...arr.slice(i+1)];perm(s).forEach(p=>r.push(c+p));});
   return[...new Set(r)];
 }
 
+// ═══════════════════════════════════════════════════════════════
+// MATCH ENGINE — STANDAR
+// Return: boolean ATAU {cocok:bool, kena:number} untuk CB/CB2D/CN
+//         {cocok:bool, prizeGrup:string} untuk PRIZE_x
+// ═══════════════════════════════════════════════════════════════
 function cocokStandard(res, nom, jenis, pos){
-  // pos = posisi digit untuk CJ: 'AS'|'KOP'|'KEPALA'|'EKOR'
   const r=res.trim(), n=nom.trim();
+  const rl=r.length;
+  const r2=r.slice(-2), r3=r.slice(-3), r4=r.slice(-4);
+  const r2dp=r.slice(0,2);
+  const r2tg=rl>=4?r.slice(rl-3,rl-1):"";
 
-  // ── DASAR: tidak butuh input nomor — cek SEBELUM validasi n ──
+  // ── DASAR: berdasarkan PENJUMLAHAN 2 digit terakhir result (mod 10 jika >= 10) ──
+  // Tidak butuh input nomor, pengecekan dari result saja
   if(jenis.startsWith("DASAR_")){
-    const r4d=r.slice(-4);
-    if(r4d.length<4) return false;
-    // DASAR = berdasarkan JUMLAH seluruh digit 4D result
-    // Contoh: result 1234 → 1+2+3+4 = 10
-    // Besar = jumlah >= 18 (range 0-36), Kecil = jumlah < 18
-    // Label "Dasar Besar & Ganjil" → menang jika jumlah BESAR atau GANJIL
-    // Label "Dasar Kecil & Genap"  → menang jika jumlah KECIL atau GENAP
-    const sum4D = r4d.split('').reduce((a,b)=>a+parseInt(b,10),0);
-    const isBesar  = sum4D >= 18;
-    const isGanjil = sum4D % 2 !== 0;
+    if(r2.length<2) return false;
+    const d1=parseInt(r2[0],10), d2=parseInt(r2[1],10);
+    let sum=(d1+d2)%10; // reduksi ke 1 digit
     const sub=jenis.slice(6);
-    if(sub==="BESAR")  return isBesar || isGanjil;   // Dasar Besar & Ganjil
-    if(sub==="KECIL")  return !isBesar || !isGanjil; // Dasar Kecil & Genap
+    if(sub==="BESAR")  return sum>=5;
+    if(sub==="KECIL")  return sum<=4;
+    if(sub==="GENAP")  return sum%2===0;
+    if(sub==="GANJIL") return sum%2!==0;
     return false;
   }
 
   if(!n) return false;
-  const rl=r.length;
-  const r2=r.slice(-2),r3=r.slice(-3),r4=r.slice(-4);
-  const r2dp=r.slice(0,2);
-  const r2tg=rl>=4?r.slice(rl-3,rl-1):"";
 
-  // ── 5D — HANYA valid jika result tepat 5 digit (pasaran Hoki Draw) ──
+  // ── 5D ──────────────────────────────────────────────────────
   if(jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_B"){
-    if(r.length!==5||n.length!==5) return false; // guard: wajib 5 digit penuh
-    if(jenis==="BB_5D_B"){
-      if(r===n) return false;
-      return perm(n.split('')).includes(r);
-    }
-    return r===n; // DISC_5D, FULL_5D, BB_5D: harus tepat
+    if(r.length!==5||n.length!==5) return false;
+    if(jenis==="BB_5D_B"){ if(r===n) return false; return perm(n.split('')).includes(r); }
+    return r===n;
   }
 
   // ── 4D ──────────────────────────────────────────────────────
-  if(jenis==="DISC_4D"||jenis==="FULL_4D") return r4===n;
-  if(jenis==="BB_4D")  return r4===n;
-  if(jenis==="BB_4D_B"){if(r4===n)return false;return perm(n.split('')).includes(r4);}
+  if(jenis==="DISC_4D"||jenis==="FULL_4D"||jenis==="BB_4D") return r4===n;
+  if(jenis==="BB_4D_B"){ if(r4===n) return false; return perm(n.split('')).includes(r4); }
 
   // ── 3D ──────────────────────────────────────────────────────
-  if(jenis==="DISC_3D"||jenis==="FULL_3D") return r3===n;
-  if(jenis==="BB_3D")  return r3===n;
-  if(jenis==="BB_3D_B"){if(r3===n)return false;return perm(n.split('')).includes(r3);}
+  if(jenis==="DISC_3D"||jenis==="FULL_3D"||jenis==="BB_3D") return r3===n;
+  if(jenis==="BB_3D_B"){ if(r3===n) return false; return perm(n.split('')).includes(r3); }
 
   // ── 2D ──────────────────────────────────────────────────────
   if(jenis==="DISC_2DDP"||jenis==="FULL_2DDP") return r2dp===n;
   if(jenis==="DISC_2DTG"||jenis==="FULL_2DTG") return r2tg===n;
-  if(jenis==="DISC_2D"||jenis==="FULL_2D") return r2===n;
-  if(jenis==="BB_2D")  return r2===n;
-  if(jenis==="BB_2D_B"){if(r2===n)return false;return perm(n.split('')).includes(r2);}
+  if(jenis==="DISC_2D"||jenis==="FULL_2D"||jenis==="BB_2D") return r2===n;
+  if(jenis==="BB_2D_B"){ if(r2===n) return false; return perm(n.split('')).includes(r2); }
 
-  // ── COLOK BEBAS — FIX: cek duplikat digit dengan array dedup ──
-  // Contoh: result=1234, nom="11" → butuh 2x angka 1, tapi result hanya ada 1x → KALAH
-  if(jenis.startsWith("CB_")||jenis.startsWith("CB2D_")||jenis.startsWith("CB4D_")){
-    const rArr=r.split('');
-    for(const d of n.split('')){
-      const idx=rArr.indexOf(d);
-      if(idx===-1) return false;
-      rArr.splice(idx,1); // hapus digit yang sudah dipakai agar tidak double-count
-    }
-    return true;
+  // ── COLOK BEBAS (CB) — 1 digit, kategori OTOMATIS dari kemunculan ──
+  // Return {cocok, kena} agar kalkulasi() bisa hitung hadiah yang tepat
+  if(jenis==="CB"){
+    let count=0;
+    for(const c of r){ if(c===n) count++; }
+    return{cocok:count>0, kena:count};
   }
 
-  // ── COLOK NAGA — FIX: sama, pakai array dedup ─────────────
-  if(jenis.startsWith("CN_")){
+  // ── COLOK BEBAS 2D (CB2D) — 2 digit, kategori OTOMATIS dari total kemunculan ──
+  if(jenis==="CB2D"){
+    if(n.length<2) return{cocok:false, kena:0};
+    const d1=n[0], d2=n[1];
+    let total=0;
+    for(const c of r){
+      if(c===d1) total++;
+      if(c===d2) total++;
+    }
+    return{cocok:total>=2, kena:total};
+  }
+
+  // ── COLOK NAGA (CN) — 3 digit berbeda, kategori OTOMATIS dari posisi kena ──
+  if(jenis==="CN"){
+    if(n.length<3) return{cocok:false, kena:0};
+    const digits=[...n]; // array 3 karakter
+    // Syarat 1: semua digit pilihan harus ada minimal 1x di result
+    for(const d of digits){
+      if(!r.includes(d)) return{cocok:false, kena:0};
+    }
+    // Syarat 2: hitung jumlah posisi di result yang terisi digit pilihan
+    let posKena=0;
+    for(const c of r){ if(digits.includes(c)) posKena++; }
+    return{cocok:true, kena:posKena};
+  }
+
+  // ── COLOK BEBAS 4D (CB4D) — array indexed, dedup check ──
+  if(jenis.startsWith("CB4D_")){
     const rArr=r.split('');
     for(const d of n.split('')){
       const idx=rArr.indexOf(d);
@@ -786,125 +778,116 @@ function cocokStandard(res, nom, jenis, pos){
     return true;
   }
 
-  // ── COLOK JITU — FIX: cek posisi digit ────────────────────
-  // AS=ribuan(idx 0), KOP=ratusan(idx 1), KEPALA=puluhan(idx 2), EKOR=satuan(idx 3)
+  // ── COLOK JITU — FIX: wajib cek posisi spesifik ──
   if(jenis==="CJ"){
     const posMap={AS:0,KOP:1,KEPALA:2,EKOR:3};
-    if(pos && posMap[pos] !== undefined){
-      return r4[posMap[pos]] === n;
+    if(pos && posMap[pos.toUpperCase()]!==undefined){
+      return r4[posMap[pos.toUpperCase()]]===n;
     }
-    // Fallback jika posisi tidak ada: cek semua posisi (lebih longgar)
-    return r4.includes(n);
-  }
-
-  // ── KOMBINASI — FIX: cek permutasi r4 ada di nom ──────────
-  // Kombinasi = semua urutan nomor yang membentuk 4D result
-  // Menang jika r4 merupakan salah satu permutasi dari nomor yang diinput
-  if(jenis==="KOMP"){
-    if(n.length < 2) return false; // minimal 2 digit untuk kombinasi
-    return perm(n.split('')).includes(r4);
-  }
-
-  // ── KEI-BASED (TT/5050/SH/KK2/DASAR) ─────────────────────
-  // Result sudah ada, tinggal cocokkan pilihan user dengan kondisi result
-  if(jenis==="TT"||jenis==="5050"||jenis==="SH"||jenis==="KK2"){
-    const last2=parseInt(r2,10);
-    const pilihan=n.toUpperCase();
-    if(jenis==="TT"){
-      // Tengah = 25-74, Tepi = 00-24 dan 75-99
-      if(pilihan==="TENGAH") return last2>=25&&last2<=74;
-      if(pilihan==="TEPI")   return last2<25||last2>74;
-    }
-    if(jenis==="5050"){
-      if(pilihan==="BESAR")  return last2>=50;
-      if(pilihan==="KECIL")  return last2<50;
-      if(pilihan==="GENAP")  return last2%2===0;
-      if(pilihan==="GANJIL") return last2%2!==0;
-    }
-    if(jenis==="SH"){
-      // Silang = digit terakhir ganjil, Homo = digit terakhir genap
-      const lastD=parseInt(r2[1],10);
-      if(pilihan==="SILANG") return lastD%2!==0;
-      if(pilihan==="HOMO")   return lastD%2===0;
-    }
-    if(jenis==="KK2"){
-      // Kembang = d1 < d2, Kempis = d1 > d2, Kembar = d1 === d2
-      const d1=parseInt(r2[0],10), d2=parseInt(r2[1],10);
-      if(pilihan==="KEMBANG") return d1<d2;
-      if(pilihan==="KEMPIS")  return d1>d2;
-      if(pilihan==="KEMBAR")  return d1===d2;
-    }
+    // Tanpa posisi: tidak valid → kalah
     return false;
   }
 
-  // ── SHIO — mapping 2D belakang (01-99 + 00) ke 12 shio ────
-  // Tabel shio tahun 2025/2026 (Tahun Ular) — urutan standar bandar:
-  // Angka 2D dipetakan berputar: shio aktif tahun ini = angka 1, 13, 25, ...
-  // Urutan mundur dari shio tahun berjalan.
-  // SHIO_ORDER index 0 = pemilik angka 1 (shio tahun berjalan).
-  if(jenis==="SHIO"){
-    // Urutan shio mundur dari tahun berjalan (2025 = Ular):
-    // 1=Ular, 2=Naga, 3=Kelinci, 4=Macan, 5=Kerbau, 6=Tikus,
-    // 7=Babi, 8=Anjing, 9=Ayam, 10=Monyet, 11=Kambing, 12=Kuda
-    const SHIO_ORDER=["ULAR","NAGA","KELINCI","MACAN","KERBAU","TIKUS",
-                      "BABI","ANJING","AYAM","MONYET","KAMBING","KUDA"];
-    const pilihan=n.toUpperCase();
-    const angka2D=parseInt(r2,10);
-    if(isNaN(angka2D)) return false;
-    // Angka 00 diperlakukan sebagai 100
-    const a=(angka2D===0)?100:angka2D;
-    const shioIdx=(a-1)%12; // angka 1→idx0(Ular), 13→idx0, dst
-    return SHIO_ORDER[shioIdx]===pilihan;
+  // ── KOMBINASI — FIX: cek 3 digit terakhir result ──
+  if(jenis==="KOMP"){
+    if(n.length<2) return false;
+    return perm(n.split('')).includes(r3);
   }
 
-  // Default: tidak dikenal → kalah (aman)
+  // ── TT / 5050 ──────────────────────────────────────────────
+  if(jenis==="TT"){
+    const last2=parseInt(r2,10);
+    const pilihan=n.toUpperCase();
+    if(pilihan==="TENGAH") return last2>=25&&last2<=74;
+    if(pilihan==="TEPI")   return last2<25||last2>74;
+    return false;
+  }
+  if(jenis==="5050"){
+    const last2=parseInt(r2,10);
+    const pilihan=n.toUpperCase();
+    if(pilihan==="BESAR")  return last2>=50;
+    if(pilihan==="KECIL")  return last2<=49;
+    if(pilihan==="GENAP")  return last2%2===0;
+    if(pilihan==="GANJIL") return last2%2!==0;
+    return false;
+  }
+
+  // ── SILANG / HOMO — FIX: wajib pakai posisi (Depan/Tengah/Belakang) ──
+  if(jenis==="SH"){
+    const posMap={DEPAN:[0,1],TENGAH:[1,2],BELAKANG:[2,3]};
+    const posKey=pos?pos.toUpperCase():'';
+    const indices=posMap[posKey];
+    if(!indices) return false;
+    const [i,j]=indices;
+    if(r4.length<4) return false;
+    const a=parseInt(r4[i],10), b=parseInt(r4[j],10);
+    const silang=(a%2!==b%2); // 1 ganjil + 1 genap
+    const pilihan=n.toUpperCase();
+    if(pilihan==="SILANG") return silang;
+    if(pilihan==="HOMO")   return !silang;
+    return false;
+  }
+
+  // ── KEMBANG / KEMPIS / KEMBAR — FIX: wajib pakai posisi ──
+  if(jenis==="KK2"){
+    const posMap={DEPAN:[0,1],TENGAH:[1,2],BELAKANG:[2,3]};
+    const posKey=pos?pos.toUpperCase():'';
+    const indices=posMap[posKey];
+    if(!indices) return false;
+    const [i,j]=indices;
+    if(r4.length<4) return false;
+    const a=parseInt(r4[i],10), b=parseInt(r4[j],10);
+    const pilihan=n.toUpperCase();
+    if(pilihan==="KEMBANG") return a<b;
+    if(pilihan==="KEMPIS")  return a>b;
+    if(pilihan==="KEMBAR")  return a===b;
+    return false;
+  }
+
+  // ── SHIO — tabel mapping referensi ──
+  if(jenis==="SHIO"){
+    const angka2D=parseInt(r2,10);
+    if(isNaN(angka2D)) return false;
+    const pilihan=n.toUpperCase();
+    const arr=SHIO_MAP[pilihan];
+    if(!arr) return false;
+    return arr.includes(angka2D);
+  }
+
   return false;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // MATCH ENGINE — PRIZE123
-// Result: "XXXX,XXXX,XXXX"
-// P1_x  → cocok dengan grup 1
-// P2_x  → cocok dengan grup 2
-// P3_x  → cocok dengan grup 3
-// Selain Prize → patokan = grup 1 (Prize 1 / 4 angka pertama)
 // ═══════════════════════════════════════════════════════════════
 function cocok(res, nom, jenis, pas, pos){
   if(isPrize123(pas)){
-    const parsed = parseResult123(res);
+    const parsed=parseResult123(res);
     if(!parsed.valid) return false;
-    const {p1, p2, p3} = parsed;
-    const n = nom.trim();
+    const {p1,p2,p3}=parsed;
+    const n=nom.trim();
 
-    // ── Taruhan PRIZE_4D/3D/2D: cek P1→P2→P3, return prize tertinggi ──
-    if(jenis==="PRIZE_4D"||jenis==="PRIZE_3D"||
-       jenis==="PRIZE_2D"||jenis==="PRIZE_2DDP"||jenis==="PRIZE_2DTG"){
-      // Tentukan fungsi pencocokan sesuai jenis
-      const rl = (grp) => grp.length;
-      const chk = (grp) => {
-        if(jenis==="PRIZE_4D")  return grp === n;
-        if(jenis==="PRIZE_3D")  return grp.slice(-3) === n;
-        if(jenis==="PRIZE_2D")  return grp.slice(-2) === n;           // 2D Belakang = 2 digit terakhir
-        if(jenis==="PRIZE_2DDP")return grp.slice(0,2) === n;          // 2D Depan = 2 digit pertama
-        if(jenis==="PRIZE_2DTG"){                                      // 2D Tengah = digit ke-2 dan ke-3
-          const g=grp.length;
-          return g>=4 ? grp.slice(g-3,g-1)===n : false;
-        }
+    // PRIZE_x: cek P1→P2→P3, return prize tertinggi yang cocok
+    if(jenis.startsWith("PRIZE_")){
+      const k=jenis.slice(6);
+      const chk=(grp)=>{
+        if(k==="4D")  return grp===n;
+        if(k==="3D")  return grp.slice(-3)===n;
+        if(k==="2D")  return grp.slice(-2)===n;
+        if(k==="2DDP")return grp.slice(0,2)===n;
+        if(k==="2DTG"){ const gl=grp.length; return gl>=4?grp.slice(gl-3,gl-1)===n:false; }
         return false;
       };
-      if(chk(p1)) return {cocok:true, prizeGrup:"Prize 1"};
-      if(chk(p2)) return {cocok:true, prizeGrup:"Prize 2"};
-      if(chk(p3)) return {cocok:true, prizeGrup:"Prize 3"};
-      return {cocok:false, prizeGrup:null};
+      if(chk(p1)) return{cocok:true,prizeGrup:"Prize 1"};
+      if(chk(p2)) return{cocok:true,prizeGrup:"Prize 2"};
+      if(chk(p3)) return{cocok:true,prizeGrup:"Prize 3"};
+      return{cocok:false,prizeGrup:null};
     }
 
-    // ── Taruhan NON-PRIZE: patokan = grup 1 (4 angka pertama) ──
-    // Jenis 5D tidak valid di pasaran Prize123 (grup hanya 4 digit)
+    // Non-Prize: patokan = grup 1
     if(jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_B") return false;
     return cocokStandard(p1, nom, jenis, pos);
   }
-
-  // ── Pasaran biasa ─────────────────────────────────────────
   return cocokStandard(res, nom, jenis, pos);
 }
 
@@ -914,121 +897,164 @@ function cocok(res, nom, jenis, pas, pos){
 function buatPenjelasan(r, pas){
   const bet=r.bet, disc=r.disc, bayar=r.bayar, dp=r.dp, jenis=r.jenis, menang=r.menang;
   const fmtN=n=>Math.round(n).toLocaleString('id-ID');
-  const is4D3D2D = ["4D","3D","2D","BB","Full","Prize","DISC","FULL"].some(k=>jenis.includes(k));
-  const isKei    = ["Tengah/Tepi","50-50","Silang","Kembang","Dasar"].some(k=>jenis.includes(k));
-  const isColok  = !is4D3D2D && !isKei;
-  const discPctStr = fmtPct(dp);
-  const multiColok = ((menang - bayar) / bet);
-  const multiStr   = multiColok % 1 === 0 ? multiColok.toFixed(0) : multiColok.toFixed(2).replace(/\.?0+$/,'');
-  const multi4D    = menang / bet;
-  const multi4DStr = multi4D % 1 === 0 ? multi4D.toFixed(0) : multi4D.toFixed(1).replace(/\.0$/,'');
+  const discPctStr=fmtPct(dp);
 
-  let html = '<div class="exbox">';
+  // Klasifikasi jenis untuk format penjelasan
+  const isPrizeTipe  = r.isPrize;
+  const isCBTipe     = r.isCB || r.isCB2D || r.isCN || r.isCB4D;
+  const isKeiTipe    = jenis.includes("Tengah")||jenis.includes("Tepi")||jenis.includes("50-50")||
+                       jenis.includes("50 - 50")||jenis.includes("Silang")||jenis.includes("Homo")||
+                       jenis.includes("Kembang")||jenis.includes("Kempis")||jenis.includes("Kembar")||
+                       jenis.includes("Dasar");
+  const is4D3D2DTipe = !isCBTipe && !isKeiTipe;
 
-  if(is4D3D2D){
-    html += '<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
+  let html='<div class="exbox">';
+
+  if(is4D3D2DTipe){
+    html+='<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
     if(r.prizeGrup && isPrize123(pas)){
-      const pgLabel = r.prizeGrup||'';
-      const pgColor = pgLabel==="Prize 1"?"var(--amber)":pgLabel==="Prize 2"?"var(--purple)":"var(--accent)";
-      html += ' <span style="color:'+pgColor+';font-weight:700;">('+esc(pgLabel)+')</span>';
+      const pgColor=r.prizeGrup==="Prize 1"?"var(--amber)":r.prizeGrup==="Prize 2"?"var(--purple)":"var(--accent)";
+      html+=' <span style="color:'+pgColor+';font-weight:700;">('+esc(r.prizeGrup)+')</span>';
     }
-    html += '<br>';
-    html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
-    html += '<br>';
-    html += '• Rumus: Bet × hadiah = Rp <span class="ef">'+fmtN(bet)+'</span> × <span class="ef">'+multi4DStr+'×</span> = <span class="ev">Rp '+fmtN(menang)+'</span>';
-    html += '<br>';
-    html += '• Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
-  } else if(isKei){
-    const keiAmt   = menang - bet - bayar;
-    const keiSign  = keiAmt >= 0 ? '+' : '';
-    html += '<strong>'+esc(jenis)+'</strong> — Pilihan <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
-    html += '<br>';
-    html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
-    html += '<br>';
-    html += '• Rumus: Bet kembali + Bayar '+keiSign+'Kei';
-    html += ' = Rp <span class="ef">'+fmtN(bet)+'</span> + Rp <span class="ef">'+fmtN(bayar)+'</span>';
-    html += ' <span class="'+(keiAmt>=0?'ev':'ek')+'">'+keiSign+'Rp '+fmtN(Math.abs(keiAmt))+'</span>';
-    html += ' = <span class="ev">Rp '+fmtN(menang)+'</span>';
-    html += '<br>';
-    html += '• Profit bersih: <span class="'+(menang-bayar>=0?'ev':'ek')+'">'+(menang-bayar>=0?'+':'')+' Rp '+fmtN(menang-bayar)+'</span>';
+    html+='<br>';
+    if(dp>0){
+      html+='Bayar: Rp <span class="ef">'+fmtN(bet)+'</span> &minus; Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Rp <span class="ef">'+fmtN(bayar)+'</span>';
+      html+='<br>';
+    }
+    const multi=menang/bet;
+    const multiStr=multi%1===0?multi.toFixed(0):multi.toFixed(1).replace(/\.0$/,'');
+    html+='Rumus: Bet &times; hadiah = Rp <span class="ef">'+fmtN(bet)+'</span> &times; <span class="ef">'+multiStr+'&times;</span> = <span class="ev">Rp '+fmtN(menang)+'</span>';
+    html+='<br>Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
+
+  } else if(isCBTipe){
+    // CB/CB2D/CN/CB4D — rumus: bayar kembali + (bet × hadiah)
+    let kenaLabel='';
+    if(r.isCB)   kenaLabel='kena <span class="ef">'+r.kena+' digit</span>';
+    if(r.isCB2D) kenaLabel='total kemunculan <span class="ef">'+r.kena+' digit</span>';
+    if(r.isCN)   kenaLabel=r.kena+' posisi kena';
+    if(r.isCB4D) kenaLabel='cocok semua digit';
+
+    html+='<strong>'+esc(jenis)+'</strong> — '+kenaLabel+' di result!';
+    html+='<br>';
+    if(dp>0){
+      html+='Bayar: Rp <span class="ef">'+fmtN(bet)+'</span> &minus; Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Rp <span class="ef">'+fmtN(bayar)+'</span>';
+      html+='<br>';
+    }
+    const hadiahMurni=menang-bayar;
+    const multi=r.hadiah||(hadiahMurni/bet);
+    const multiStr=typeof multi==='number'?(multi%1===0?multi.toFixed(0):multi.toFixed(1).replace(/\.0$/,'')):String(multi);
+    html+='Rumus: Bayar kembali + (Bet &times; hadiah)';
+    html+=' = Rp <span class="ef">'+fmtN(bayar)+'</span> + (Rp <span class="ef">'+fmtN(bet)+'</span> &times; <span class="ef">'+multiStr+'&times;</span>)';
+    html+=' = <span class="ev">Rp '+fmtN(menang)+'</span>';
+    html+='<br>Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
+
   } else {
-    const hadiahMurni = Math.round(bet * multiColok);
-    html += '<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
-    html += '<br>';
-    html += '• Modal Keluar: Rp <span class="ef">'+fmtN(bet)+'</span> − Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Bayar Rp <span class="ef">'+fmtN(bayar)+'</span>';
-    html += '<br>';
-    html += '• Rumus: Bayar kembali + (Bet × hadiah)';
-    html += ' = Rp <span class="ef">'+fmtN(bayar)+'</span> + (Rp <span class="ef">'+fmtN(bet)+'</span> × <span class="ef">'+multiStr+'×</span>)';
-    html += ' = <span class="ev">Rp '+fmtN(menang)+'</span>';
-    html += '<br>';
-    html += '• Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
+    // Kei-based (TT/5050/SH/KK2/DASAR)
+    const keiAmt=r.keiAmt||0;
+    const keiSign=keiAmt>=0?'+':'-';
+    html+='<strong>'+esc(jenis)+'</strong> — Pilihan <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
+    html+='<br>';
+    if(dp>0){
+      html+='Bayar: Rp <span class="ef">'+fmtN(bet)+'</span> &minus; Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Rp <span class="ef">'+fmtN(bayar)+'</span>';
+      html+='<br>';
+    }
+    html+='Rumus: Bet kembali + Bayar '+keiSign+'Kei';
+    html+=' = Rp <span class="ef">'+fmtN(bet)+'</span> + Rp <span class="ef">'+fmtN(bayar)+'</span>';
+    html+=' <span class="'+(keiAmt>=0?'ev':'ek')+'">'+keiSign+'Rp '+fmtN(Math.abs(keiAmt))+'</span>';
+    html+=' = <span class="ev">Rp '+fmtN(menang)+'</span>';
+    html+='<br>Profit bersih: <span class="'+(menang-bayar>=0?'ev':'ek')+'">'+(menang-bayar>=0?'+':'')+' Rp '+fmtN(menang-bayar)+'</span>';
   }
-  html += '</div>';
+  html+='</div>';
   return html;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BETTING_RULES — Validasi per jenis
+// BETTING_RULES — Validasi & UI per jenis
 // ═══════════════════════════════════════════════════════════════
+const POS_SH_KK2=[
+  {v:'DEPAN',   l:'Depan (2 digit terdepan)'},
+  {v:'TENGAH',  l:'Tengah (digit ke-2 dan ke-3)'},
+  {v:'BELAKANG',l:'Belakang (2 digit terakhir)'}
+];
+const POS_CJ=[
+  {v:'AS',    l:'AS (Ribuan — digit ke-1)'},
+  {v:'KOP',   l:'KOP (Ratusan — digit ke-2)'},
+  {v:'KEPALA',l:'KEPALA (Puluhan — digit ke-3)'},
+  {v:'EKOR',  l:'EKOR (Satuan — digit ke-4)'}
+];
+
 const BETTING_RULES = {
   DISC_4D:{t:'angka',d:4,ph:'Tepat 4 digit (misal 1234)'},
   DISC_3D:{t:'angka',d:3,ph:'Tepat 3 digit (misal 234)'},
   DISC_2D:{t:'angka',d:2,ph:'2 digit belakang (misal 34)'},
   DISC_2DDP:{t:'angka',d:2,ph:'2 digit depan (misal 12)'},
   DISC_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23)'},
+  DISC_5D:{t:'angka',d:5,ph:'Tepat 5 digit (misal 12345)'},
   FULL_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
   FULL_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
-  FULL_2D:{t:'angka',d:2,ph:'2 digit belakang (misal 34)'},
-  FULL_2DDP:{t:'angka',d:2,ph:'2 digit depan (misal 12)'},
-  FULL_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23)'},
+  FULL_2D:{t:'angka',d:2,ph:'2 digit belakang'},
+  FULL_2DDP:{t:'angka',d:2,ph:'2 digit depan'},
+  FULL_2DTG:{t:'angka',d:2,ph:'2 digit tengah'},
+  FULL_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
   BB_4D:{t:'angka',d:4,ph:'Tepat 4 digit'},
   BB_3D:{t:'angka',d:3,ph:'Tepat 3 digit'},
   BB_2D:{t:'angka',d:2,ph:'Tepat 2 digit'},
-  BB_4D_B:{t:'angka',d:4,ph:'4 digit (tidak tepat)'},
-  BB_3D_B:{t:'angka',d:3,ph:'3 digit (tidak tepat)'},
-  BB_2D_B:{t:'angka',d:2,ph:'2 digit (tidak tepat)'},
-  DISC_5D:{t:'angka',d:5,ph:'Tepat 5 digit (misal 12345)'},
-  FULL_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
+  BB_4D_B:{t:'angka',d:4,ph:'4 digit (susunan berbeda)'},
+  BB_3D_B:{t:'angka',d:3,ph:'3 digit (susunan berbeda)'},
+  BB_2D_B:{t:'angka',d:2,ph:'2 digit (susunan berbeda)'},
   BB_5D:{t:'angka',d:5,ph:'Tepat 5 digit'},
-  BB_5D_B:{t:'angka',d:5,ph:'5 digit (tidak tepat)'},
-  // Prize — sistem otomatis cek P1/P2/P3
-  PRIZE_4D:  {t:'angka',d:4,ph:'Tepat 4 digit — Prize 1/2/3 otomatis'},
-  PRIZE_3D:  {t:'angka',d:3,ph:'Tepat 3 digit — Prize 1/2/3 otomatis'},
-  PRIZE_2D:  {t:'angka',d:2,ph:'2 digit belakang — Prize 1/2/3 otomatis'},
-  PRIZE_2DDP:{t:'angka',d:2,ph:'2 digit depan (misal 12) — Prize 1/2/3 otomatis'},
-  PRIZE_2DTG:{t:'angka',d:2,ph:'2 digit tengah (misal 23) — Prize 1/2/3 otomatis'},
-  CB_0:{t:'angka',d:1,ph:'1 digit saja (contoh: 5)'},
-  CB_1:{t:'angka',d:2,ph:'Tepat 2 digit (contoh: 34)'},
-  CB_2:{t:'angka',d:3,ph:'Tepat 3 digit (contoh: 123)'},
-  CB_3:{t:'angka',d:4,ph:'Tepat 4 digit (contoh: 1234)'},
-  CB2D_0:{t:'angka',d:2,ph:'Tepat 2 digit'},
-  CB2D_1:{t:'angka',d:3,ph:'Tepat 3 digit'},
-  CB2D_2:{t:'angka',d:4,ph:'Tepat 4 digit'},
-  CB2D_3:{t:'angka',d:5,ph:'Tepat 5 digit'},
-  CB4D_0:{t:'angka',d:4,ph:'Tepat 4 digit'},
-  CB4D_1:{t:'angka',d:5,ph:'Tepat 5 digit'},
-  CN_0:{t:'angka',d:3,ph:'3 digit berbeda (contoh: 135)'},
-  CN_1:{t:'angka',d:4,ph:'4 digit berbeda (contoh: 1356)'},
-  CN_2:{t:'angka',d:5,ph:'5 digit berbeda (contoh: 12345)'},
-  CJ:{t:'angka',d:1,ph:'1 digit (contoh: 5)',
-    posisi:[{v:'AS',l:'AS (Ribuan)'},{v:'KOP',l:'KOP (Ratusan)'},{v:'KEPALA',l:'KEPALA (Puluhan)'},{v:'EKOR',l:'EKOR (Satuan)'}]},
-  SHIO:{t:'dropdown',d:null,ph:null,lbl:'Pilih Shio',
-    opts:[{v:'TIKUS',l:'Tikus'},{v:'KERBAU',l:'Kerbau'},{v:'MACAN',l:'Macan'},
-          {v:'KELINCI',l:'Kelinci'},{v:'NAGA',l:'Naga'},{v:'ULAR',l:'Ular'},
-          {v:'KUDA',l:'Kuda'},{v:'KAMBING',l:'Kambing'},{v:'MONYET',l:'Monyet'},
-          {v:'AYAM',l:'Ayam'},{v:'ANJING',l:'Anjing'},{v:'BABI',l:'Babi'}]},
-  '5050':{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
-    opts:[{v:'BESAR',l:'Besar'},{v:'KECIL',l:'Kecil'},{v:'GENAP',l:'Genap'},{v:'GANJIL',l:'Ganjil'}]},
-  DASAR_BESAR:{t:'none',d:null,ph:null},
-  DASAR_KECIL:{t:'none',d:null,ph:null},
-  TT:{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
-    opts:[{v:'TENGAH',l:'Tengah'},{v:'TEPI',l:'Tepi'}]},
-  SH:{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
-    opts:[{v:'SILANG',l:'Silang'},{v:'HOMO',l:'Homo'}]},
-  KK2:{t:'dropdown',d:null,ph:null,lbl:'Pilih Tipe',
-    opts:[{v:'KEMBANG',l:'Kembang'},{v:'KEMPIS',l:'Kempis'},{v:'KEMBAR',l:'Kembar'}]},
-  KOMP:{t:'angka',d:4,ph:'4 digit — menang jika result 4D adalah salah satu urutan dari digit ini'},
+  BB_5D_B:{t:'angka',d:5,ph:'5 digit (susunan berbeda)'},
+  PRIZE_4D:{t:'angka',d:4,ph:'Tepat 4 digit — Prize 1/2/3 otomatis'},
+  PRIZE_3D:{t:'angka',d:3,ph:'Tepat 3 digit — Prize 1/2/3 otomatis'},
+  PRIZE_2D:{t:'angka',d:2,ph:'2 digit belakang — Prize 1/2/3 otomatis'},
+  PRIZE_2DDP:{t:'angka',d:2,ph:'2 digit depan — Prize 1/2/3 otomatis'},
+  PRIZE_2DTG:{t:'angka',d:2,ph:'2 digit tengah — Prize 1/2/3 otomatis'},
+  // CB — SATU pilihan, 1 digit; kategori menang otomatis dari hasil result
+  CB:{t:'angka',d:1,ph:'1 digit saja (0-9)',
+    hint:'Kategori kemenangan (x1.5/x3/x4.5/x6) ditentukan otomatis dari jumlah kemunculan digit di result'},
+  // CB2D — SATU pilihan, 2 digit; kategori otomatis dari total kemunculan
+  CB2D:{t:'angka',d:2,ph:'2 digit pilih (contoh: 47)',
+    hint:'Kategori kemenangan otomatis dari total kemunculan kedua digit di result (min. 2 kemunculan untuk menang)'},
+  // CB4D: user pilih berapa digit yang dipasang (4 atau 5) — dikerjakan langsung
+  CB4D_0:{t:'angka',d:4,ph:'4 digit pilih (contoh: 1357)'},
+  CB4D_1:{t:'angka',d:5,ph:'5 digit pilih (contoh: 13579)'},
+  // CN — SATU pilihan, 3 digit berbeda; kategori otomatis dari posisi kena
+  CN:{t:'angka',d:3,ph:'3 digit berbeda (contoh: 135)',
+    hint:'Semua digit harus ada di result. Kategori (x23/x35) otomatis dari jumlah posisi yang kena'},
+  // CJ — digit + posisi wajib
+  CJ:{t:'angka',d:1,ph:'1 digit (contoh: 5)', posisi:POS_CJ},
+  // SHIO — dropdown + posisi tidak perlu (cukup pilih shio)
+  SHIO:{t:'dropdown',lbl:'Pilih Shio',opts:[
+    {v:'KUDA',l:'Kuda'},{v:'ULAR',l:'Ular'},{v:'NAGA',l:'Naga'},{v:'KELINCI',l:'Kelinci'},
+    {v:'HARIMAU',l:'Harimau'},{v:'KERBAU',l:'Kerbau'},{v:'TIKUS',l:'Tikus'},{v:'BABI',l:'Babi'},
+    {v:'ANJING',l:'Anjing'},{v:'AYAM',l:'Ayam'},{v:'MONYET',l:'Monyet'},{v:'KAMBING',l:'Kambing'}
+  ]},
+  // 5050
+  '5050':{t:'dropdown',lbl:'Pilih Tipe',opts:[
+    {v:'BESAR',l:'Besar (50-99)'},{v:'KECIL',l:'Kecil (00-49)'},
+    {v:'GENAP',l:'Genap'},{v:'GANJIL',l:'Ganjil'}
+  ]},
+  // DASAR — 4 pilihan terpisah, tidak butuh input nomor
+  DASAR_BESAR:{t:'none'},
+  DASAR_GANJIL:{t:'none'},
+  DASAR_KECIL:{t:'none'},
+  DASAR_GENAP:{t:'none'},
+  // TT
+  TT:{t:'dropdown',lbl:'Pilih Tipe',opts:[
+    {v:'TENGAH',l:'Tengah (25-74)'},{v:'TEPI',l:'Tepi (00-24 atau 75-99)'}
+  ]},
+  // SH — FIX: wajib pilih posisi DAN tipe
+  SH:{t:'dropdown',lbl:'Tipe',opts:[
+    {v:'SILANG',l:'Silang (1 ganjil + 1 genap)'},{v:'HOMO',l:'Homo (keduanya sama paritas)'}
+  ], posisi:POS_SH_KK2},
+  // KK2 — FIX: wajib pilih posisi DAN tipe
+  KK2:{t:'dropdown',lbl:'Tipe',opts:[
+    {v:'KEMBANG',l:'Kembang (kecil ke besar)'},{v:'KEMPIS',l:'Kempis (besar ke kecil)'},{v:'KEMBAR',l:'Kembar (sama)'}
+  ], posisi:POS_SH_KK2},
+  // KOMP — FIX: 3 digit, cek 3 digit terakhir result
+  KOMP:{t:'angka',d:3,ph:'3 digit — menang jika 3 digit terakhir result adalah salah satu susunannya'},
 };
+
 function getRule(j){ return BETTING_RULES[j]||{t:'angka',d:null,ph:'Nomor'}; }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1048,7 +1074,7 @@ function addRow(){
     '<div class="row-top">'+
       '<select class="rj"></select>'+
       '<input type="number" class="rb" placeholder="Nominal Bet" min="0" step="1000">'+
-      '<button class="rm-btn">×</button>'+
+      '<button class="rm-btn">x</button>'+
     '</div>'+
     '<div class="row-mid hide" id="mid'+id+'"></div>'+
     '<div class="row-bot"><span class="err-msg" id="err'+id+'"></span></div>';
@@ -1063,35 +1089,33 @@ function addRow(){
 
 function updateRowUI(id){
   const row=document.getElementById("r"+id);
-  if(!row)return;
+  if(!row) return;
   const j=row.querySelector('.rj').value;
   const rule=getRule(j);
   const mid=document.getElementById("mid"+id);
-  const needAngka=rule.t==='angka';
-  const needDrop=rule.t==='dropdown';
-  const needPos=!!rule.posisi;
-  if(rule.t==='none'){mid.className="row-mid hide";mid.innerHTML='';return;}
-  mid.className="row-mid "+((needAngka&&needPos)?'c2':'c1');
+
+  if(rule.t==='none'){ mid.className="row-mid hide"; mid.innerHTML=''; return; }
+
+  // Layout: 2 kolom jika ada posisi dropdown
+  mid.className="row-mid "+(rule.posisi?'c2':'c1');
   let html='';
-  if(needAngka){
+
+  // Input angka (untuk t='angka')
+  if(rule.t==='angka'){
     const maxL=rule.d||5;
     const ph=rule.ph||('Tepat '+maxL+' digit');
+    const hintTxt=rule.hint||('Wajib tepat '+maxL+' digit');
+    const hintCls=rule.hint?'hint-auto':'hint-msg';
     html+=
       '<div>'+
         '<span class="inp-lbl">Nomor</span>'+
         '<input type="text" class="rn mono" id="rn'+id+'" placeholder="'+esc(ph)+'" maxlength="'+maxL+'">'+
-        '<span class="hint-msg">'+(rule.d?'Wajib tepat '+rule.d+' digit':'Masukkan nomor')+'</span>'+
+        '<span class="'+hintCls+'">'+esc(hintTxt)+'</span>'+
       '</div>';
   }
-  if(needPos&&rule.posisi){
-    const posOpts=rule.posisi.map(o=>'<option value="'+esc(o.v)+'">'+esc(o.l)+'</option>').join('');
-    html+=
-      '<div>'+
-        '<span class="inp-lbl">Posisi</span>'+
-        '<select class="rpos" id="rpos'+id+'"><option value="">— Pilih Posisi —</option>'+posOpts+'</select>'+
-      '</div>';
-  }
-  if(needDrop&&rule.opts){
+
+  // Dropdown tipe (untuk t='dropdown')
+  if(rule.t==='dropdown'&&rule.opts){
     const dropOpts=rule.opts.map(o=>'<option value="'+esc(o.v)+'">'+esc(o.l)+'</option>').join('');
     html+=
       '<div>'+
@@ -1099,7 +1123,20 @@ function updateRowUI(id){
         '<select class="rsub" id="rsub'+id+'"><option value="">— Pilih —</option>'+dropOpts+'</select>'+
       '</div>';
   }
+
+  // Dropdown posisi (CJ, SH, KK2)
+  if(rule.posisi){
+    const posOpts=rule.posisi.map(o=>'<option value="'+esc(o.v)+'">'+esc(o.l)+'</option>').join('');
+    html+=
+      '<div>'+
+        '<span class="inp-lbl">Posisi</span>'+
+        '<select class="rpos" id="rpos'+id+'"><option value="">— Pilih Posisi —</option>'+posOpts+'</select>'+
+      '</div>';
+  }
+
   mid.innerHTML=html;
+
+  // Event listeners
   const rnEl=document.getElementById("rn"+id);
   if(rnEl){
     rnEl.addEventListener('input',()=>{
@@ -1116,13 +1153,14 @@ function updateRowUI(id){
 
 function validateRow(id){
   const row=document.getElementById("r"+id);
-  if(!row)return{ok:false};
+  if(!row) return{ok:false};
   const j=row.querySelector('.rj').value;
   const rule=getRule(j);
   const errEl=document.getElementById("err"+id);
   const bet=parseFloat(row.querySelector('.rb').value)||0;
   let msg='';
-  if(rule.t==='angka'&&(rule.d||rule.req)){
+
+  if(rule.t==='angka'){
     const rnEl=document.getElementById("rn"+id);
     const val=rnEl?rnEl.value:'';
     if(!val) msg='Nomor wajib diisi'+(rule.d?' (tepat '+rule.d+' digit)':'');
@@ -1130,14 +1168,14 @@ function validateRow(id){
   }
   if(!msg&&rule.posisi){
     const posEl=document.getElementById("rpos"+id);
-    if(posEl&&!posEl.value) msg='Silakan pilih posisi: AS / KOP / KEPALA / EKOR';
+    if(posEl&&!posEl.value) msg='Silakan pilih posisi (Depan/Tengah/Belakang)';
   }
   if(!msg&&rule.t==='dropdown'&&rule.opts){
     const subEl=document.getElementById("rsub"+id);
     if(subEl&&!subEl.value) msg='Silakan pilih '+(rule.lbl||'tipe');
   }
   if(!msg&&bet<=0) msg='Nominal bet belum diisi';
-  if(errEl){errEl.textContent=msg;errEl.className=msg?'err-msg show':'err-msg';}
+  if(errEl){ errEl.textContent=msg; errEl.className=msg?'err-msg show':'err-msg'; }
   row.classList.toggle('row-err',!!msg&&bet>0);
   row.classList.toggle('row-ok',!msg&&bet>0);
   return{ok:!msg};
@@ -1145,56 +1183,51 @@ function validateRow(id){
 
 function getRowNomor(id,j){
   const rule=getRule(j);
-  if(rule.t==='angka'){const el=document.getElementById("rn"+id);return el?el.value.trim():'';}
-  if(rule.t==='dropdown'&&rule.opts){const el=document.getElementById("rsub"+id);return el?el.value:'';}
+  if(rule.t==='angka'){ const el=document.getElementById("rn"+id); return el?el.value.trim():''; }
+  if(rule.t==='dropdown'&&rule.opts){ const el=document.getElementById("rsub"+id); return el?el.value:''; }
   return '';
 }
-function getRowPosisi(id){const el=document.getElementById("rpos"+id);return el?el.value:'';}
+function getRowPosisi(id){ const el=document.getElementById("rpos"+id); return el?el.value:''; }
 
 function onPasaranChange(){
-  const pas = document.getElementById("inPasaran").value;
-  const resInp = document.getElementById("inResult");
-  const badge  = document.getElementById("prize123Badge");
-  const hint   = document.getElementById("resultHint");
+  const pas=document.getElementById("inPasaran").value;
+  const resInp=document.getElementById("inResult");
+  const badge=document.getElementById("prize123Badge");
+  const hint=document.getElementById("resultHint");
 
-  // ── Update tampilan sesuai tipe pasaran ───────────────────
   if(isPrize123(pas)){
-    resInp.placeholder   = "1234,5678,9012";
-    resInp.maxLength     = 14;
-    resInp.style.letterSpacing = "3px";
-    resInp.style.fontSize      = "1.1rem";
-    badge.style.display  = "block";
-    hint.style.display   = "block";
-  } else if(pas === "HOKI5D"){
-    // Hoki Draw 5D: result 5 digit
-    resInp.placeholder   = "00000";
-    resInp.maxLength     = 5;
-    resInp.style.letterSpacing = "8px";
-    resInp.style.fontSize      = "1.3rem";
-    badge.style.display  = "none";
-    hint.style.display   = "none";
+    resInp.placeholder="1234,5678,9012";
+    resInp.maxLength=14;
+    resInp.style.letterSpacing="3px";
+    resInp.style.fontSize="1.1rem";
+    badge.style.display="block";
+    hint.style.display="block";
+  } else if(pas==="HOKI5D"){
+    resInp.placeholder="00000";
+    resInp.maxLength=5;
+    resInp.style.letterSpacing="8px";
+    resInp.style.fontSize="1.3rem";
+    badge.style.display="none";
+    hint.style.display="none";
   } else {
-    // Pasaran biasa: result 4 digit
-    resInp.placeholder   = "0000";
-    resInp.maxLength     = 4;
-    resInp.style.letterSpacing = "10px";
-    resInp.style.fontSize      = "1.3rem";
-    badge.style.display  = "none";
-    hint.style.display   = "none";
+    resInp.placeholder="0000";
+    resInp.maxLength=4;
+    resInp.style.letterSpacing="10px";
+    resInp.style.fontSize="1.3rem";
+    badge.style.display="none";
+    hint.style.display="none";
   }
-  resInp.value = ""; // Clear result saat ganti pasaran
-
-  // ── Update dropdown jenis taruhan semua baris ─────────────
-  const list = getJenis(pas);
-  const opts = renderOpts(list);
-  const flat = flatItems(list);
+  resInp.value="";
+  const list=getJenis(pas);
+  const opts=renderOpts(list);
+  const flat=flatItems(list);
   document.querySelectorAll(".bet-row").forEach(row=>{
-    const rid = row.id.slice(1);
-    const sel = row.querySelector(".rj");
+    const rid=row.id.slice(1);
+    const sel=row.querySelector(".rj");
     if(!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = opts;
-    if(flat.some(o=>o.v===cur)) sel.value = cur;
+    const cur=sel.value;
+    sel.innerHTML=opts;
+    if(flat.some(o=>o.v===cur)) sel.value=cur;
     updateRowUI(rid);
   });
 }
@@ -1205,85 +1238,103 @@ function onPasaranChange(){
 const lastCalc={bet:0,disc:0,bayar:0,menang:0,profit:0,pasaran:'',result:''};
 
 function kalkulasi(){
-  const res = document.getElementById("inResult").value.trim();
-  const pas = document.getElementById("inPasaran").value;
+  const res=document.getElementById("inResult").value.trim();
+  const pas=document.getElementById("inPasaran").value;
 
-  if(!res){alert("Masukkan nomor result!");return;}
+  if(!res){ alert("Masukkan nomor result!"); return; }
 
-  // Validasi format result sesuai tipe pasaran
   if(isPrize123(pas)){
-    const parsed = parseResult123(res);
+    const parsed=parseResult123(res);
     if(!parsed.valid){
       alert("Format result untuk pasaran ini harus:\nXXXX,XXXX,XXXX\nContoh: 1234,5678,9012\n\n(3 grup angka, masing-masing 4 digit, dipisah koma)");
       return;
     }
-  } else if(pas === "HOKI5D"){
-    // Hoki Draw 5D: result WAJIB tepat 5 digit
-    if(res.length !== 5){
-      alert("Result pasaran HOKI DRAW 5D harus tepat 5 digit!\nContoh: 12345\n\nSekarang: "+res.length+" digit");
-      return;
-    }
+  } else if(pas==="HOKI5D"){
+    if(res.length!==5){ alert("Result pasaran HOKI DRAW 5D harus tepat 5 digit!\nContoh: 12345\n\nSekarang: "+res.length+" digit"); return; }
   } else {
-    // Pasaran biasa: result WAJIB tepat 4 digit
-    if(res.length !== 4){
-      alert("Result pasaran ini harus tepat 4 digit!\nContoh: 1234\n\nSekarang: "+res.length+" digit");
-      return;
-    }
+    if(res.length!==4){ alert("Result pasaran ini harus tepat 4 digit!\nContoh: 1234\n\nSekarang: "+res.length+" digit"); return; }
   }
 
-  const betRows = document.querySelectorAll(".bet-row");
-  if(!betRows.length){alert("Tambahkan minimal 1 taruhan!");return;}
+  const betRows=document.querySelectorAll(".bet-row");
+  if(!betRows.length){ alert("Tambahkan minimal 1 taruhan!"); return; }
 
-  let hasErr = false;
-  const activeIds = [];
+  let hasErr=false;
+  const activeIds=[];
   betRows.forEach(row=>{
-    const id = row.id.slice(1);
-    const bet = parseFloat(row.querySelector('.rb').value)||0;
+    const id=row.id.slice(1);
+    const bet=parseFloat(row.querySelector('.rb').value)||0;
     if(bet<=0) return;
-    const v = validateRow(id);
-    if(!v.ok) hasErr = true;
+    const v=validateRow(id);
+    if(!v.ok) hasErr=true;
     else activeIds.push(id);
   });
 
   if(hasErr){
-    const fe = document.querySelector('.bet-row.row-err');
+    const fe=document.querySelector('.bet-row.row-err');
     if(fe) fe.scrollIntoView({behavior:'smooth',block:'center'});
     alert("Ada input yang belum lengkap!\nPerbaiki field yang ditandai merah terlebih dahulu.");
     return;
   }
-  if(!activeIds.length){alert("Tidak ada taruhan aktif (bet > 0)!");return;}
+  if(!activeIds.length){ alert("Tidak ada taruhan aktif (bet > 0)!"); return; }
 
   let tBet=0,tDisc=0,tBayar=0,tMenang=0;
   const hasil=[];
 
-  activeIds.forEach((id,i)=>{
-    const row   = document.getElementById("r"+id);
-    const j     = row.querySelector(".rj").value;
-    const rule  = getRule(j);
-    const bet   = parseFloat(row.querySelector('.rb').value)||0;
-    const lbl   = row.querySelector(".rj").selectedOptions[0]?.text||j;
-    const nom   = getRowNomor(id,j);
-    const pos   = getRowPosisi(id);
-    const nomDisp = rule.posisi&&pos ? nom+'@'+pos : (nom||'—');
-    const c     = hitung(j, bet, pas);
-    // cocok() bisa return boolean (biasa) atau {cocok, prizeGrup} (Prize_x)
-    const cocokResult = cocok(res, nom, j, pas, pos);
-    const isObj  = (typeof cocokResult === 'object' && cocokResult !== null);
-    const ok     = isObj ? cocokResult.cocok : cocokResult;
-    // Tentukan prizeGrup: dari cocok() jika Prize_x, dari getPrizeGrup jika P1_/P2_/P3_
-    let pg = isObj ? cocokResult.prizeGrup : getPrizeGrup(j);
+  // Ambil config pasaran untuk CB/CB2D/CN hadiah lookup
+  const resolvedPasConf=isPrize123(pas)?'UMUM':pas;
+  const Pconf=getConfig(resolvedPasConf);
 
-    // Hitung menang berdasarkan prize yang didapat
-    let win = 0;
+  activeIds.forEach((id,i)=>{
+    const row=document.getElementById("r"+id);
+    const j=row.querySelector(".rj").value;
+    const rule=getRule(j);
+    const bet=parseFloat(row.querySelector('.rb').value)||0;
+    const lbl=row.querySelector(".rj").selectedOptions[0]?.text||j;
+    const nom=getRowNomor(id,j);
+    const pos=getRowPosisi(id);
+    const nomDisp=rule.posisi&&pos?nom+'@'+pos:(nom||'—');
+    const c=hitung(j,bet,pas);
+
+    // Cocokkan dengan result
+    const cocokResult=cocok(res,nom,j,pas,pos);
+    const isObj=(typeof cocokResult==='object'&&cocokResult!==null);
+    const ok=isObj?cocokResult.cocok:cocokResult;
+    let pg=isObj?cocokResult.prizeGrup:getPrizeGrup(j);
+
+    let win=0;
+    let kena=isObj?cocokResult.kena:undefined;
+    let hadiah=undefined;
+    let isCBFlag=false, isCB2DFlag=false, isCNFlag=false, isCB4DFlag=false;
+
     if(ok){
-      if(c.isPrize && pg){
-        // Ambil nilai menang sesuai prize yang cocok
-        if(pg==="Prize 1")      win = Math.round(c.menangP1||c.menang);
-        else if(pg==="Prize 2") win = Math.round(c.menangP2||c.menang);
-        else if(pg==="Prize 3") win = Math.round(c.menangP3||c.menang);
-        else                      win = Math.round(c.menang);
+      if(c.isPrize&&pg){
+        if(pg==="Prize 1")      win=Math.round(c.menangP1||c.menang);
+        else if(pg==="Prize 2") win=Math.round(c.menangP2||c.menang);
+        else if(pg==="Prize 3") win=Math.round(c.menangP3||c.menang);
+        else                    win=Math.round(c.menang);
+      } else if(c.isCB){
+        // CB: menang = bayar + (bet × hadiah sesuai kena)
+        isCBFlag=true;
+        const hMap=(Pconf.CB||{}).hadiah||{};
+        hadiah=hMap[kena]||0;
+        win=Math.round(c.bayar+(bet*hadiah));
+      } else if(c.isCB2D){
+        // CB2D: menang = bayar + (bet × hadiah sesuai kena)
+        isCB2DFlag=true;
+        const hMap=(Pconf.CB2D||{}).hadiah||{};
+        hadiah=hMap[kena]||0;
+        win=Math.round(c.bayar+(bet*hadiah));
+      } else if(c.isCN){
+        // CN: menang = bayar + (bet × hadiah sesuai posisi kena)
+        isCNFlag=true;
+        const hMap=(Pconf.CN||{}).hadiah||{};
+        hadiah=hMap[kena]||0;
+        win=Math.round(c.bayar+(bet*hadiah));
+      } else if(j.startsWith("CB4D_")){
+        isCB4DFlag=true;
+        win=Math.round(c.menang);
       } else {
-        win = Math.round(c.menang);
+        win=Math.round(c.menang);
       }
     }
 
@@ -1292,46 +1343,65 @@ function kalkulasi(){
       no:i+1, jenis:lbl, nomor:nomDisp, bet,
       disc:c.disc, bayar:c.bayar, menang:win,
       cocok:ok, dp:c.dp, prizeGrup:pg,
-      isPrize: !!c.isPrize
+      isPrize:!!c.isPrize,
+      isCB:isCBFlag, isCB2D:isCB2DFlag, isCN:isCNFlag, isCB4D:isCB4DFlag,
+      kena, hadiah,
+      keiAmt:c.keiAmt||0
     });
   });
 
-  const profit = tMenang - tBayar;
+  const profit=tMenang-tBayar;
   Object.assign(lastCalc,{bet:tBet,disc:tDisc,bayar:tBayar,menang:tMenang,profit,pasaran:pas,result:res});
 
-  document.getElementById("s-bet").textContent    = "Rp "+fmt(tBet);
-  document.getElementById("s-disc").textContent   = "Rp "+fmt(tDisc);
-  document.getElementById("s-bayar").textContent  = "Rp "+fmt(tBayar);
-  document.getElementById("s-menang").textContent = "Rp "+fmt(tMenang);
-  const pe = document.getElementById("s-profit");
-  pe.textContent  = (profit>=0?"+ ":"- ")+"Rp "+fmt(Math.abs(profit));
-  pe.className    = "sc-val mono "+(profit>=0?"pos":"neg");
-  document.getElementById("s-prof-sub").textContent = profit>=0?"Profit":"Loss";
+  document.getElementById("s-bet").textContent    ="Rp "+fmt(tBet);
+  document.getElementById("s-disc").textContent   ="Rp "+fmt(tDisc);
+  document.getElementById("s-bayar").textContent  ="Rp "+fmt(tBayar);
+  document.getElementById("s-menang").textContent ="Rp "+fmt(tMenang);
+  const pe=document.getElementById("s-profit");
+  pe.textContent=(profit>=0?"+ ":"- ")+"Rp "+fmt(Math.abs(profit));
+  pe.className="sc-val mono "+(profit>=0?"pos":"neg");
+  document.getElementById("s-prof-sub").textContent=profit>=0?"Profit":"Loss";
+
+  // ── Tampilkan / sembunyikan kolom Diskon ─────────────────
+  const hasAnyDisc=hasil.some(r=>r.dp>0);
+  const hasilTable=document.getElementById("hasilTable");
+  hasilTable.classList.toggle('no-disc',!hasAnyDisc);
 
   // ── Render tabel hasil ────────────────────────────────────
-  const tb = document.getElementById("hasilBody");
+  const tb=document.getElementById("hasilBody");
   if(!hasil.length){
     tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ei">Tidak ada taruhan aktif</span></div></td></tr>';
     return;
   }
 
-  tb.innerHTML = hasil.map(r=>{
-    // Badge status menang: Prize1/2/3 punya warna berbeda
+  tb.innerHTML=hasil.map(r=>{
     let statusBadge='';
     if(r.cocok){
       if(r.prizeGrup==="Prize 1")      statusBadge='<span class="badge bp1">MENANG P1</span>';
       else if(r.prizeGrup==="Prize 2") statusBadge='<span class="badge bp2">MENANG P2</span>';
       else if(r.prizeGrup==="Prize 3") statusBadge='<span class="badge bp3">MENANG P3</span>';
-      else                              statusBadge='<span class="badge bw">MENANG</span>';
+      else{
+        // Untuk CB/CB2D/CN tampilkan kategori yang kena
+        let extraLbl='';
+        if(r.isCB&&r.kena)   extraLbl=' ('+r.kena+' digit)';
+        if(r.isCB2D&&r.kena) extraLbl=' ('+r.kena+' hit)';
+        if(r.isCN&&r.kena)   extraLbl=' ('+r.kena+' posisi)';
+        statusBadge='<span class="badge bw">MENANG'+esc(extraLbl)+'</span>';
+      }
     } else {
       statusBadge='<span class="badge bl">TIDAK</span>';
     }
+    // Kolom diskon: tampilkan "—" untuk no-disc, atau nilai disc
+    const discCell=r.dp>0
+      ?fmt(r.disc)+'<small style="color:var(--text3)"> ('+fmtPct(r.dp)+')</small>'
+      :'<span style="color:var(--text3)">—</span>';
+
     return '<tr class="'+(r.cocok?'win':'lose')+'">'
       +'<td class="td">'+r.no+'</td>'
       +'<td><span class="badge bt">'+esc(r.jenis)+'</span></td>'
       +'<td class="mono tg">'+esc(r.nomor)+'</td>'
       +'<td class="mono tb">'+fmt(r.bet)+'</td>'
-      +'<td class="mono tp">'+fmt(r.disc)+'<small style="color:var(--text3)"> ('+fmtPct(r.dp)+')</small></td>'
+      +'<td class="mono tp col-disc">'+discCell+'</td>'
       +'<td class="mono">'+fmt(r.bayar)+'</td>'
       +'<td class="mono '+(r.cocok?'tgr':'td')+'">'+(r.cocok?fmt(r.menang):'—')+'</td>'
       +'<td>'+statusBadge+'</td>'
@@ -1339,129 +1409,105 @@ function kalkulasi(){
   }).join('');
 
   // ── Render panel penjelasan ───────────────────────────────
-  const ep = document.getElementById("explainPanel");
-  ep.style.display = "block";
-  const menangRows = hasil.filter(r=>r.cocok);
-  const losRows    = hasil.filter(r=>!r.cocok);
+  const ep=document.getElementById("explainPanel");
+  ep.style.display="block";
+  const menangRows=hasil.filter(r=>r.cocok);
+  const losRows=hasil.filter(r=>!r.cocok);
+  const isPas123=isPrize123(pas);
 
-  let exHtml = '';
-  const isPas123 = isPrize123(pas);
+  let exHtml='';
 
-  // ── Header sapaan ─────────────────────────────────────────
-  if(menangRows.length > 0 && losRows.length === 0){
-    // Semua menang
-    const prizeList = menangRows.filter(r=>r.prizeGrup).map(r=>r.prizeGrup);
-    const uniquePrize = [...new Set(prizeList)];
-    if(isPas123 && uniquePrize.length > 0){
-      exHtml +=
-        '<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.6;">'+
-          'Selamat untuk bettingan Anda menang pada <span style="color:var(--amber)">'+
-          uniquePrize.join(' &amp; ')+'</span> ya bosku! 🎉'+
-        '</div>';
+  if(menangRows.length>0&&losRows.length===0){
+    const prizeList=menangRows.filter(r=>r.prizeGrup).map(r=>r.prizeGrup);
+    const uniquePrize=[...new Set(prizeList)];
+    if(isPas123&&uniquePrize.length>0){
+      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.6;">Selamat, taruhan Anda menang pada <span style="color:var(--amber)">'+uniquePrize.join(' &amp; ')+'</span> bosku.</div>';
     } else {
-      exHtml +=
-        '<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.5;">'+
-          'Selamat untuk bettingan Anda menang sesuai dengan hasil result yang keluar ya bosku! 🎉'+
-        '</div>';
+      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.5;">Selamat, semua taruhan Anda menang sesuai result yang keluar, bosku.</div>';
     }
-  } else if(menangRows.length > 0 && losRows.length > 0){
-    const prizeList = menangRows.filter(r=>r.prizeGrup).map(r=>r.prizeGrup);
-    const uniquePrize = [...new Set(prizeList)];
-    if(isPas123 && uniquePrize.length > 0){
-      exHtml +=
-        '<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.6;">'+
-          'Selamat untuk bettingan Anda yang menang pada <span style="color:var(--amber)">'+
-          uniquePrize.join(' &amp; ')+'</span>, bosku.'+
-        '</div>';
+  } else if(menangRows.length>0&&losRows.length>0){
+    const prizeList=menangRows.filter(r=>r.prizeGrup).map(r=>r.prizeGrup);
+    const uniquePrize=[...new Set(prizeList)];
+    if(isPas123&&uniquePrize.length>0){
+      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.6;">Selamat untuk taruhan yang menang pada <span style="color:var(--amber)">'+uniquePrize.join(' &amp; ')+'</span>, bosku.</div>';
     } else {
-      exHtml +=
-        '<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.5;">'+
-          'Berikut untuk bettingan Anda yang menang, bosku.'+
-        '</div>';
+      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.5;">Berikut rincian taruhan yang menang, bosku.</div>';
     }
   } else {
-    exHtml +=
-      '<div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:12px;line-height:1.5;">'+
-        'Sayang sekali bosku, belum beruntung kali ini. Coba lagi ya.'+
-      '</div>';
+    exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:12px;line-height:1.5;">Belum beruntung kali ini, bosku. Coba lagi ya.</div>';
   }
 
-  // ── Info sistem Prize123 (tampil jika pasaran Prize123) ───
-  if(isPas123 && menangRows.length > 0){
-    // Cek ada taruhan prize yang menang
-    const prizeWins = menangRows.filter(r=>r.prizeGrup);
-    if(prizeWins.length > 0){
+  // Info Prize123 win detail
+  if(isPas123&&menangRows.length>0){
+    const prizeWins=menangRows.filter(r=>r.prizeGrup);
+    if(prizeWins.length>0){
       prizeWins.forEach(r=>{
-        const grpNum = r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
-        const parsed = parseResult123(res);
-        const grpResult = r.prizeGrup==="Prize 1"?parsed.p1:r.prizeGrup==="Prize 2"?parsed.p2:parsed.p3;
-        exHtml +=
+        const grpNum=r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
+        const parsed=parseResult123(res);
+        const grpResult=r.prizeGrup==="Prize 1"?parsed.p1:r.prizeGrup==="Prize 2"?parsed.p2:parsed.p3;
+        exHtml+=
           '<div class="exbox" style="border-left-color:var(--amber);margin-bottom:8px;font-size:.74rem;">'+
-            '📌 <strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+
+            '<strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+
             'keluar pada <strong style="color:var(--amber)">'+esc(r.prizeGrup)+'</strong> '+
             '(grup <strong>'+grpNum+'</strong> dari result = <span class="ef mono">'+esc(grpResult)+'</span>).'+
           '</div>';
       });
     }
-    // Info non-prize jika ada
-    const nonPrizeWins = menangRows.filter(r=>!r.prizeGrup);
-    if(nonPrizeWins.length > 0){
-      const parsed = parseResult123(res);
-      exHtml +=
+    const nonPrizeWins=menangRows.filter(r=>!r.prizeGrup);
+    if(nonPrizeWins.length>0){
+      const parsed=parseResult123(res);
+      exHtml+=
         '<div class="exbox" style="border-left-color:var(--accent);margin-bottom:8px;font-size:.74rem;">'+
-          'ℹ️ Bettingan jenis <strong>selain Prize</strong> pada pasaran ini menggunakan patokan '+
+          'Taruhan jenis <strong>selain Prize</strong> pada pasaran ini menggunakan patokan '+
           '<strong style="color:var(--accent)">4 angka pertama (Prize 1)</strong> '+
-          'dari result yaitu <span class="ef mono">'+esc(parsed.p1)+'</span> ya bosku.'+
+          'dari result yaitu <span class="ef mono">'+esc(parsed.p1)+'</span> bosku.'+
         '</div>';
     }
   }
 
-  // ── Tiket menang ──────────────────────────────────────────
+  // Tiket menang
   if(menangRows.length){
-    menangRows.forEach(r=>{
-      exHtml += '<div style="margin-bottom:10px;">'+buatPenjelasan(r, pas)+'</div>';
-    });
+    menangRows.forEach(r=>{ exHtml+='<div style="margin-bottom:10px;">'+buatPenjelasan(r,pas)+'</div>'; });
   }
 
-  // ── Tiket kalah ───────────────────────────────────────────
+  // Tiket kalah
   if(losRows.length){
-    exHtml +=
+    exHtml+=
       '<div style="margin-top:10px;margin-bottom:8px;font-size:.75rem;font-weight:700;color:var(--red);">'+
         'Taruhan yang belum beruntung ('+losRows.length+' tiket):'+
       '</div>';
     losRows.forEach(r=>{
-      let keteranganKalah = '';
-      if(isPas123 && r.prizeGrup){
-        // Jelaskan nomor ini cek di grup mana
-        const grpNum = r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
-        keteranganKalah = 'tidak cocok dengan hasil <strong>'+esc(r.prizeGrup)+'</strong> (grup '+grpNum+' result).';
+      let ket='';
+      if(isPas123&&r.prizeGrup){
+        const grpNum=r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
+        ket='tidak cocok dengan hasil <strong>'+esc(r.prizeGrup)+'</strong> (grup '+grpNum+' result).';
       } else if(isPas123){
-        const parsed = parseResult123(res);
-        keteranganKalah = 'tidak cocok dengan patokan 4 angka pertama <span class="ef mono">'+esc(parsed.p1)+'</span> dari result.';
+        const parsed=parseResult123(res);
+        ket='tidak cocok dengan patokan 4 angka pertama <span class="ef mono">'+esc(parsed.p1)+'</span> dari result.';
       } else {
-        keteranganKalah = 'tidak cocok dengan result. Taruhan kalah, bosku.';
+        ket='tidak cocok dengan result.';
       }
-      exHtml +=
+      exHtml+=
         '<div class="exbox" style="margin-bottom:6px;">'+
-          '• <strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+keteranganKalah+
+          '- <strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+ket+
         '</div>';
     });
   }
 
-  // ── Rekap akhir ───────────────────────────────────────────
-  const profitSign = profit>=0?'+':'-';
-  const profitCls  = profit>=0?'tgr':'tr';
-  const plbl = esc(document.getElementById("inPasaran").selectedOptions[0].text);
-
-  exHtml +=
+  // Rekap akhir
+  const profitSign=profit>=0?'+':'-';
+  const profitCls=profit>=0?'tgr':'tr';
+  const plbl=esc(document.getElementById("inPasaran").selectedOptions[0].text);
+  exHtml+=
     '<div style="margin-top:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;font-size:.75rem;">'+
       '<div style="font-size:.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--text2);font-weight:600;margin-bottom:10px;">Rekap Akhir</div>'+
       '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
         '<span class="td">Total Bet</span><span class="mono tb">Rp '+fmt(tBet)+'</span>'+
       '</div>'+
-      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
-        '<span class="td">Total Diskon</span><span class="mono tp">− Rp '+fmt(tDisc)+'</span>'+
-      '</div>'+
+      (tDisc>0?
+        '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
+          '<span class="td">Total Diskon</span><span class="mono tp">- Rp '+fmt(tDisc)+'</span>'+
+        '</div>':'')+
       '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2);font-weight:700;">'+
         '<span>Total Bayar</span><span class="mono tg">Rp '+fmt(tBayar)+'</span>'+
       '</div>'+
@@ -1477,16 +1523,15 @@ function kalkulasi(){
         : '<div style="margin-top:6px;font-size:.62rem;color:var(--green);">Keuntungan = Menang ('+fmt(tMenang)+') - Bayar ('+fmt(tBayar)+')</div>'
       )+
     '</div>';
+  ep.innerHTML=exHtml;
 
-  ep.innerHTML = exHtml;
-
-  // ── Breakdown box kiri ────────────────────────────────────
-  const bd = document.getElementById("bdown");
-  bd.style.display = "block";
-  const resDisplay = isPas123 ? esc(res) : esc(res);
-  bd.innerHTML =
+  // Breakdown box kiri
+  const bd=document.getElementById("bdown");
+  bd.style.display="block";
+  const resDisplay=esc(res);
+  bd.innerHTML=
     '<div class="bd-row"><span class="td">Total Bet</span><span class="mono tb">Rp '+fmt(tBet)+'</span></div>'+
-    '<div class="bd-row"><span class="td">Total Diskon</span><span class="mono tp">- Rp '+fmt(tDisc)+'</span></div>'+
+    (tDisc>0?'<div class="bd-row"><span class="td">Total Diskon</span><span class="mono tp">- Rp '+fmt(tDisc)+'</span></div>':'')+
     '<div class="bd-row tot"><span>Total Bayar</span><span class="mono tg">Rp '+fmt(tBayar)+'</span></div>'+
     '<div class="bd-row"><span class="td">Total Kemenangan</span><span class="mono tgr">Rp '+fmt(tMenang)+'</span></div>'+
     '<div class="bd-row tot"><span>Profit / Loss</span><span class="mono '+(profit>=0?'tgr':'tr')+'">'+(profit>=0?'+':'-')+' Rp '+fmt(Math.abs(profit))+'</span></div>'+
@@ -1494,32 +1539,32 @@ function kalkulasi(){
       'Result: <span class="mono tg">'+resDisplay+'</span> | Pasaran: <span style="color:var(--accent)">'+plbl+'</span> | '+esc(new Date().toLocaleString('id-ID'))+
     '</div>';
 
-  sw('hasil', document.querySelector('.tab'));
+  sw('hasil',document.querySelector('.tab'));
 }
 
 // ═══════════════════════════════════════════════════════════════
 // RESET
 // ═══════════════════════════════════════════════════════════════
 function resetForm(){
-  const resInp = document.getElementById("inResult");
-  resInp.value = "";
-  resInp.placeholder = "0000";
-  resInp.maxLength   = 5;
-  resInp.style.letterSpacing = "10px";
-  resInp.style.fontSize      = "1.3rem";
-  document.getElementById("prize123Badge").style.display = "none";
-  document.getElementById("resultHint").style.display    = "none";
-  document.getElementById("inPasaran").value = "UMUM";
-  document.getElementById("betList").innerHTML = "";
-  document.getElementById("hasilBody").innerHTML =
+  const resInp=document.getElementById("inResult");
+  resInp.value="";
+  resInp.placeholder="0000";
+  resInp.maxLength=5;
+  resInp.style.letterSpacing="10px";
+  resInp.style.fontSize="1.3rem";
+  document.getElementById("prize123Badge").style.display="none";
+  document.getElementById("resultHint").style.display="none";
+  document.getElementById("inPasaran").value="UMUM";
+  document.getElementById("betList").innerHTML="";
+  document.getElementById("hasilTable").classList.remove('no-disc');
+  document.getElementById("hasilBody").innerHTML=
     '<tr><td colspan="8"><div class="empty"><span class="ei">Belum ada data</span><p>Masukkan result dan taruhan, lalu klik Hitung Sekarang</p></div></td></tr>';
-  document.getElementById("explainPanel").style.display = "none";
-  document.getElementById("bdown").style.display        = "none";
-  ["s-bet","s-disc","s-bayar","s-menang"].forEach(id=>
-    document.getElementById(id).textContent="Rp 0");
-  const pe = document.getElementById("s-profit");
-  pe.textContent = "Rp 0"; pe.className = "sc-val mono";
-  document.getElementById("s-prof-sub").textContent = "Belum dihitung";
+  document.getElementById("explainPanel").style.display="none";
+  document.getElementById("bdown").style.display="none";
+  ["s-bet","s-disc","s-bayar","s-menang"].forEach(id=>document.getElementById(id).textContent="Rp 0");
+  const pe=document.getElementById("s-profit");
+  pe.textContent="Rp 0"; pe.className="sc-val mono";
+  document.getElementById("s-prof-sub").textContent="Belum dihitung";
   rc=0; addRow();
 }
 
@@ -1537,23 +1582,23 @@ function sw(name,btn){
 // LIST HADIAH — Tab Referensi
 // ═══════════════════════════════════════════════════════════════
 function renderRef(){
-  const el = document.getElementById("refGrid");
-  function block(title, headCols, rows){
-    const n = headCols.length;
-    const firstW = n===2?55:n===3?45:38;
-    const restW  = ((100-firstW)/(n-1)).toFixed(1);
-    const colgroup = '<colgroup><col style="width:'+firstW+'%">'+Array(n-1).fill('<col style="width:'+restW+'%">').join('')+'</colgroup>';
-    const thead = '<tr>'+headCols.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
-    const tbody = rows.map(r=>
+  const el=document.getElementById("refGrid");
+  function block(title,headCols,rows){
+    const n=headCols.length;
+    const firstW=n===2?55:n===3?45:38;
+    const restW=((100-firstW)/(n-1)).toFixed(1);
+    const colgroup='<colgroup><col style="width:'+firstW+'%">'+Array(n-1).fill('<col style="width:'+restW+'%">').join('')+'</colgroup>';
+    const thead='<tr>'+headCols.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+    const tbody=rows.map(r=>
       '<tr>'+r.map((cell,ci)=>{
         let cls='';
         const s=String(cell);
         if(ci>0){
-          if(/^x[\d.,]+$/.test(s))                           cls='hval';
+          if(/^x[\d.,]+$/.test(s))                            cls='hval';
           else if(/^\d+[\.,]\d+%$/.test(s)||/^\d+%$/.test(s)) cls='hdisc';
-          else if(s.includes('Kei')&&s.includes('-'))         cls='hkei-neg';
-          else if(s.includes('Kei')&&s.includes('+'))         cls='hkei-pos';
-          else if(s==='—')                                    cls='hnote';
+          else if(s.includes('Kei')&&s.includes('-'))          cls='hkei-neg';
+          else if(s.includes('Kei')&&s.includes('+'))          cls='hkei-pos';
+          else if(s==='—')                                     cls='hnote';
         }
         return '<td'+(cls?' class="'+cls+'"':'')+'>'+cell+'</td>';
       }).join('')+'</tr>'
@@ -1565,60 +1610,73 @@ function renderRef(){
   html+=block('HADIAH PRIZE 1, 2, 3',['JENIS','4D','3D','2D'],[
     ['PRIZE 1','x6.500','x650','x70'],['PRIZE 2','x2.100','x210','x20'],['PRIZE 3','x1.100','x110','x8'],
   ]);
-  html+=block('HADIAH BET FULL ALL PASARAN — KECUALI PASARAN HOKI DRAW',['HADIAH','KALI'],[
+  html+=block('HADIAH BET FULL — KECUALI PASARAN HOKI DRAW',['HADIAH','KALI'],[
     ['4D','x10.000'],['3D','x1.000'],['2D','x100'],
   ]);
-  html+=block('HADIAH BET FULL KHUSUS PASARAN HOKI DRAW 5D',['HADIAH','KALI'],[
+  html+=block('HADIAH BET FULL — KHUSUS HOKI DRAW 5D',['HADIAH','KALI'],[
     ['5D','x88.000'],['4D','x10.000'],['3D','x1.000'],['2D','x100'],
   ]);
-  html+=block('HADIAH DISCOUNT ALL PASARAN — KECUALI KING KONG 4D, TOTO MALI, HOKI DRAW',['HADIAH','KALI','DISCOUNT'],[
-    ['4D','x3.000','66.5%'],['3D','x400','59.5%'],['2D Belakang','x70','29.5%'],['2D Depan dan Tengah','x65','29.5%'],
+  html+=block('HADIAH DISKON — UMUM & PRIZE123',['HADIAH','KALI','DISKON'],[
+    ['4D','x3.000','66.5%'],['3D','x400','59.5%'],['2D Belakang','x70','29.5%'],['2D Depan / Tengah','x65','29.5%'],
   ]);
-  html+=block('HADIAH DISCOUNT KHUSUS PASARAN KING KONG 4D',['HADIAH','KALI','DISCOUNT'],[
+  html+=block('HADIAH DISKON — KING KONG 4D',['HADIAH','KALI','DISKON'],[
     ['4D','x6.000','33%'],['3D','x700','24%'],['2D','x80','15%'],
   ]);
-  html+=block('HADIAH DISCOUNT KHUSUS PASARAN TOTO MALI',['HADIAH','KALI','DISCOUNT'],[
+  html+=block('HADIAH DISKON — TOTO MALI',['HADIAH','KALI','DISKON'],[
     ['4D','x3.000','67%'],['3D','x400','57%'],['2D Depan','x70','27%'],['2D Tengah','x70','27%'],['2D Belakang','x70','27%'],
   ]);
-  html+=block('HADIAH DISCOUNT KHUSUS PASARAN HOKI DRAW 5D',['HADIAH','KALI','DISCOUNT'],[
+  html+=block('HADIAH DISKON — HOKI DRAW 5D',['HADIAH','KALI','DISKON'],[
     ['5D','x50.000','38%'],['4D','x7.000','20%'],['3D','x750','20%'],['2D','x75','20%'],
   ]);
-  html+=block('HADIAH BOLAK BALIK ALL PASARAN — KECUALI PASARAN HOKI DRAW',['HADIAH','TEPAT','TIDAK TEPAT (BB)'],[
+  html+=block('HADIAH BOLAK BALIK — KECUALI HOKI DRAW',['HADIAH','TEPAT','ACAK (BB)'],[
     ['4D','x4.000','x200'],['3D','x400','x100'],['2D','x70','x20'],
   ]);
-  html+=block('HADIAH BOLAK BALIK KHUSUS PASARAN HOKI DRAW 5D',['HADIAH','TEPAT','TIDAK TEPAT (BB)'],[
+  html+=block('HADIAH BOLAK BALIK — HOKI DRAW 5D',['HADIAH','TEPAT','ACAK (BB)'],[
     ['5D','x50.000','x350'],['4D','x5.000','x180'],['3D','x500','x75'],['2D','x80','x15'],
   ]);
-  html+=block('HADIAH COLOK BEBAS — ALL PASARAN',['JENIS','KALI','DISCOUNT'],[
-    ['Colok Bebas (1 Digit)','x1.5','6%'],['Colok Bebas (2 Digit)','x3','6%'],
-    ['Colok Bebas (3 Digit)','x4.5','6%'],['Colok Bebas (4 Digit)','x6','6%'],
+  html+=block('COLOK BEBAS — 1 DIGIT PILIH (Kategori Otomatis)',['KEMUNCULAN DIGIT DI RESULT','HADIAH','DISKON'],[
+    ['1x muncul','x1.5','6%'],['2x muncul','x3','6%'],['3x muncul','x4.5','6%'],['4x muncul','x6','6%'],
   ]);
-  html+=block('HADIAH COLOK BEBAS 2D — ALL PASARAN',['JENIS','KALI','DISCOUNT'],[
-    ['CB 2D (2 Digit)','x7','10%'],['CB 2D (3 Digit)','x11','10%'],
-    ['CB 2D (4 Digit)','x18','10%'],['CB 2D (5 Digit)','x200','10%'],
+  html+=block('COLOK BEBAS 2D — 2 DIGIT PILIH (Kategori Otomatis) | UMUM',['TOTAL KEMUNCULAN KEDUA DIGIT','HADIAH','DISKON'],[
+    ['2 kemunculan','x7','10%'],['3 kemunculan','x11','10%'],['4 kemunculan','x18','10%'],
   ]);
-  html+=block('HADIAH COLOK BEBAS 2D — KHUSUS HOKI DRAW 5D',['JENIS','KALI','DISCOUNT'],[
-    ['CB 2D (2 Digit)','x4','10%'],['CB 2D (3 Digit)','x6','10%'],
-    ['CB 2D (4 Digit)','x20','10%'],['CB 2D (5 Digit)','x200','10%'],
+  html+=block('COLOK BEBAS 2D — 2 DIGIT PILIH (Kategori Otomatis) | HOKI DRAW 5D',['TOTAL KEMUNCULAN KEDUA DIGIT','HADIAH','DISKON'],[
+    ['2 kemunculan','x4','10%'],['3 kemunculan','x6','10%'],['4 kemunculan','x20','10%'],['5 kemunculan','x200','10%'],
   ]);
-  html+=block('HADIAH COLOK BEBAS 4D — KHUSUS HOKI DRAW 5D',['JENIS','KALI','DISCOUNT'],[
+  html+=block('COLOK BEBAS 4D — EKSKLUSIF HOKI DRAW 5D',['JENIS','KALI','DISKON'],[
     ['CB 4D (4 Digit)','x50','10%'],['CB 4D (5 Digit)','x200','10%'],
   ]);
-  html+=block('HADIAH COLOK NAGA',['JENIS','ALL PASARAN','HOKI DRAW 5D','DISCOUNT'],[
-    ['Colok Naga (3 Digit)','x23','x12','10%'],
-    ['Colok Naga (4 Digit)','x35','x30','10%'],
-    ['Colok Naga (5 Digit)','x125','x125','10%'],
+  html+=block('COLOK NAGA — 3 DIGIT PILIH (Kategori Otomatis)',['POSISI KENA DI RESULT','UMUM','HOKI DRAW 5D','DISKON'],[
+    ['3 posisi kena','x23','x12','10%'],
+    ['4 posisi kena','x35','x30','10%'],
+    ['5 posisi kena','x125','x125','10%'],
   ]);
-  html+=block('HADIAH COLOK JITU, SHIO, KOMBINASI — ALL PASARAN',['JENIS','KALI','DISCOUNT'],[
-    ['Colok Jitu','x8','6%'],['Shio','x9.5','5%'],['Kombinasi','x2.6','8%'],
+  html+=block('COLOK JITU / SHIO / KOMBINASI',['JENIS','KALI','DISKON'],[
+    ['Colok Jitu (pilih digit + posisi)','x8','6%'],
+    ['Shio','x9.5','5%'],
+    ['Kombinasi (3 digit — cek 3 digit terakhir result)','x2.6','8%'],
   ]);
-  html+=block('HADIAH TARUHAN KEI-BASED (1 : 1) — ALL PASARAN',['JENIS','SISTEM','KEI','DISCOUNT'],[
-    ['Tengah / Tepi','1 : 1','Kei -3%','2%'],
-    ['50 - 50','1 : 1','Kei -3%','2%'],
-    ['Silang / Homo','1 : 1','Kei -3%','2%'],
-    ['Kembang / Kempis','1 : 1','Kei -3%','2%'],
-    ['Dasar Besar / Ganjil','1 : 1','Kei -25%','2%'],
-    ['Dasar Kecil / Genap','1 : 1','Kei +10%','2%'],
+  html+=block('TARUHAN KEI-BASED (Sistem 1:1)',['JENIS','KEI','DISKON'],[
+    ['Tengah / Tepi','Kei -3% dari Bayar','2%'],
+    ['50 - 50','Kei -3% dari Bayar','2%'],
+    ['Silang / Homo (pilih posisi)','Kei -3% dari Bayar','2%'],
+    ['Kembang / Kempis (pilih posisi)','Kei -3% dari Bayar','2%'],
+    ['Dasar Besar / Ganjil','Kei -25% dari Bet','2%'],
+    ['Dasar Kecil / Genap','Kei +10% dari Bet','2%'],
+  ]);
+  html+=block('SHIO — MAPPING 2 DIGIT TERAKHIR RESULT',['SHIO','ANGKA 2 DIGIT TERAKHIR'],[
+    ['Kuda','01, 13, 25, 37, 49, 61, 73, 85, 97'],
+    ['Ular','02, 14, 26, 38, 50, 62, 74, 86, 98'],
+    ['Naga','03, 15, 27, 39, 51, 63, 75, 87, 99'],
+    ['Kelinci','04, 16, 28, 40, 52, 64, 76, 88, 00'],
+    ['Harimau','05, 17, 29, 41, 53, 65, 77, 89'],
+    ['Kerbau','06, 18, 30, 42, 54, 66, 78, 90'],
+    ['Tikus','07, 19, 31, 43, 55, 67, 79, 91'],
+    ['Babi','08, 20, 32, 44, 56, 68, 80, 92'],
+    ['Anjing','09, 21, 33, 45, 57, 69, 81, 93'],
+    ['Ayam','10, 22, 34, 46, 58, 70, 82, 94'],
+    ['Monyet','11, 23, 35, 47, 59, 71, 83, 95'],
+    ['Kambing','12, 24, 36, 48, 60, 72, 84, 96'],
   ]);
   el.innerHTML=html;
 }
@@ -1628,25 +1686,21 @@ function renderRef(){
 // ═══════════════════════════════════════════════════════════════
 const fmt    = n => Math.round(n).toLocaleString('id-ID');
 const fmtPct = d => { const s=(+(d*100).toFixed(1)).toString(); return(s.endsWith('.0')?s.slice(0,-2):s)+'%'; };
-const updClk = () => document.getElementById("clk").textContent = new Date().toLocaleTimeString('id-ID');
+const updClk = () => document.getElementById("clk").textContent=new Date().toLocaleTimeString('id-ID');
 
-// Input result — filter sesuai pasaran aktif
-document.getElementById("inResult").addEventListener("input", function(){
-  const pas = document.getElementById("inPasaran").value;
+document.getElementById("inResult").addEventListener("input",function(){
+  const pas=document.getElementById("inPasaran").value;
   if(isPrize123(pas)){
-    // Izinkan angka dan koma, max 14 karakter (1234,5678,9012)
-    this.value = this.value.replace(/[^0-9,]/g,"").slice(0,14);
-  } else if(pas === "HOKI5D"){
-    // HANYA Hoki Draw 5D yang boleh 5 digit
-    this.value = this.value.replace(/[^0-9]/g,"").slice(0,5);
+    this.value=this.value.replace(/[^0-9,]/g,"").slice(0,14);
+  } else if(pas==="HOKI5D"){
+    this.value=this.value.replace(/[^0-9]/g,"").slice(0,5);
   } else {
-    // Semua pasaran lain: maksimal 4 digit
-    this.value = this.value.replace(/[^0-9]/g,"").slice(0,4);
+    this.value=this.value.replace(/[^0-9]/g,"").slice(0,4);
   }
 });
 
 renderRef();
-setInterval(updClk, 1000);
+setInterval(updClk,1000);
 updClk();
 addRow();
 </script>
