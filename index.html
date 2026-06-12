@@ -396,6 +396,14 @@ optgroup option{background:#0d1829;color:var(--text1);font-weight:400;font-size:
 // ═══════════════════════════════════════════════════════════════
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 
+// ── KEBIJAKAN PEMBULATAN UANG: STANDAR PROFESIONAL (TRUNCATION) ──
+// Mengikuti konvensi bandar/sportsbook besar: SEMUA nilai uang dibulatkan
+// KE BAWAH ke rupiah utuh — potongan member maupun pembayaran kemenangan
+// tidak pernah melebihi nilai eksaknya. Konsisten, dapat diprediksi, auditable.
+// Noise floating-point dibersihkan dulu (presisi 6 desimal) supaya nilai yang
+// sebenarnya bulat (mis. 294.9999999996 dari 1000x0.295) TIDAK turun ke 294.
+const bulatUang = v => Math.floor(Math.round(v*1e6)/1e6);
+
 // ═══════════════════════════════════════════════════════════════
 // PRIZE123 CONFIG
 // ═══════════════════════════════════════════════════════════════
@@ -445,10 +453,8 @@ const H = {
     SH:{d:0.02,kei:-0.03}, KK2:{d:0.02,kei:-0.03},
     DASAR:{d:0.02,sub:{BESAR:{kei:-0.25},KECIL:{kei:0.10},GENAP:{kei:0.10},GANJIL:{kei:-0.25}}}
   },
-  // Prize123 pakai config UMUM
-  TOTO_CAMBODIA:null, POIPET:null, HUAHIN:null, SYDNEY:null,
-  SINGAPORE:null, MAGNUM4D:null, NEVADA:null, BANGKOK_POOLS:null,
-  BRUNEI_POOLS:null, CHELSEA_POOLS:null, HONGKONG:null,
+  // Pasaran Prize 1-2-3 TIDAK didefinisikan di sini —
+  // mereka mewarisi config UMUM lewat CONFIG_ALIAS (lihat getConfig di bawah).
   TOTOMALI:{
     DISC:{"4D":{h:3000,d:0.67},"3D":{h:400,d:0.57},"2D":{h:70,d:0.27},"2DDP":{h:70,d:0.27},"2DTG":{h:70,d:0.27}},
     FULL:{"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
@@ -460,8 +466,9 @@ const H = {
     BB:{"4D":{t:4000,b:200,d:0.33},"3D":{t:400,b:100,d:0.24},"2D":{t:70,b:20,d:0.15}}
   },
   HOKI5D:{
-    FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100},"2DTG":{h:100}},
-    DISC:{"5D":{h:50000,d:0.38},"4D":{h:7000,d:0.20},"3D":{h:750,d:0.20},"2D":{h:75,d:0.20},"2DDP":{h:75,d:0.20},"2DTG":{h:75,d:0.20}},
+    // 2D Tengah (2DTG) TIDAK tersedia di Hoki Draw 5D (konfirmasi aturan pasaran)
+    FULL:{"5D":{h:88000},"4D":{h:10000},"3D":{h:1000},"2D":{h:100},"2DDP":{h:100}},
+    DISC:{"5D":{h:50000,d:0.38},"4D":{h:7000,d:0.20},"3D":{h:750,d:0.20},"2D":{h:75,d:0.20},"2DDP":{h:75,d:0.20}},
     BB:{"5D":{t:50000,b:350,d:0.38},"4D":{t:5000,b:180,d:0.20},"3D":{t:500,b:75,d:0.20},"2D":{t:80,b:15,d:0.20}},
     CB:{d:0.06, hadiah:{1:1.5, 2:3, 3:4.5, 4:6, 5:6}},
     CB2D:{d:0.10, hadiah:{2:4, 3:6, 4:20, 5:200}},
@@ -477,7 +484,38 @@ const H = {
   }
 };
 
-function getConfig(pas){ return H[pas] || H.UMUM; }
+// ── RESOLUSI CONFIG (pengaman) ──────────────────────────────────
+// Pasaran di daftar ini MEWARISI config pasaran lain.
+// Tambahkan pasaran baru di sini jika ia meminjam config yang sudah ada.
+const CONFIG_ALIAS={
+  TOTO_CAMBODIA:'UMUM', POIPET:'UMUM', HUAHIN:'UMUM', SYDNEY:'UMUM',
+  SINGAPORE:'UMUM', MAGNUM4D:'UMUM', NEVADA:'UMUM', BANGKOK_POOLS:'UMUM',
+  BRUNEI_POOLS:'UMUM', CHELSEA_POOLS:'UMUM', HONGKONG:'UMUM'
+};
+
+// Gabung 2 tingkat: kunci grup (DISC/FULL/BB/...) milik sendiri menimpa
+// milik warisan PER SUB-KUNCI, sisanya tetap diwariskan. Dengan ini,
+// memberi config sebagian (mis. SYDNEY:{DISC:{"4D":{...}}}) hanya
+// mengubah bagian itu — grup & sub-kunci lain TIDAK hilang senyap.
+function gabungConfig(base,own){
+  const out={...base};
+  for(const k in own){
+    const v=own[k], b=base[k];
+    out[k]=(v&&typeof v==='object'&&!Array.isArray(v)&&b&&typeof b==='object'&&!Array.isArray(b))
+      ? {...b,...v} : v;
+  }
+  return out;
+}
+
+function getConfig(pas){
+  const own=H[pas];
+  const aliasKey=CONFIG_ALIAS[pas];
+  const aliasBase=aliasKey?H[aliasKey]:null;
+  if(own&&aliasBase) return gabungConfig(aliasBase,own); // override sebagian + warisan
+  if(own)            return own;                          // config mandiri (UMUM/TOTOMALI/KK4D/HOKI5D)
+  if(aliasBase)      return aliasBase;                    // murni warisan (pasaran Prize 123)
+  return H.UMUM;                                          // jaring pengaman terakhir
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SHIO MAPPING — sesuai tabel referensi
@@ -502,8 +540,8 @@ const SHIO_MAP = {
 // JENIS TARUHAN PER PASARAN
 // ═══════════════════════════════════════════════════════════════
 function getJenis(pas){
-  const resolvedPas = isPrize123(pas) ? 'UMUM' : pas;
-  const P = getConfig(resolvedPas);
+  // Resolusi config sepenuhnya lewat getConfig (CONFIG_ALIAS menangani Prize123)
+  const P = getConfig(pas);
   const groups = [];
   const allow5D = (pas === "HOKI5D");
   const digitKeys = allow5D ? ['5D','4D','3D','2D','2DDP','2DTG'] : ['4D','3D','2D','2DDP','2DTG'];
@@ -597,10 +635,10 @@ function flatItems(groups){ return groups.flatMap(g=>g.items); }
 // fromKeiDasar: kei dihitung dari BET (DASAR)
 // ═══════════════════════════════════════════════════════════════
 function hitung(jenis, bet, pas){
-  const resolvedPas = isPrize123(pas) ? 'UMUM' : pas;
-  const P = getConfig(resolvedPas);
+  // Resolusi config sepenuhnya lewat getConfig (CONFIG_ALIAS menangani Prize123)
+  const P = getConfig(pas);
   const nil = {disc:0,bayar:bet,menang:0,dp:0};
-  const dk  = pct => Math.round(bet*pct);
+  const dk  = pct => bulatUang(bet*pct); // pembulatan ke atas
 
   // Guard: 5D HANYA valid di pasaran HOKI5D
   const is5D = jenis==="DISC_5D"||jenis==="FULL_5D"||jenis==="BB_5D"||jenis==="BB_5D_D";
@@ -624,16 +662,16 @@ function hitung(jenis, bet, pas){
   // menang = bet + bayar + round(bayar × kei)  — kei negatif mengurangi
   const fromKei = cfg=>{
     const d=dk(cfg.d||0), b=bet-d;
-    const keiAmt=Math.round(b*(cfg.kei||0));
-    return{disc:d,bayar:b,menang:Math.round(bet+b+keiAmt),dp:cfg.d||0,keiAmt};
+    const keiAmt=bulatUang(b*(cfg.kei||0));
+    return{disc:d,bayar:b,menang:bulatUang(bet+b+keiAmt),dp:cfg.d||0,keiAmt};
   };
 
   // KEI dari BET (DASAR — berbeda dari TT/5050/SH/KK2)
   // menang = bet + bayar + round(bet × kei)  — kei bisa positif atau negatif
   const fromKeiDasar = cfg=>{
     const d=dk(cfg.d||0), b=bet-d;
-    const keiAmt=Math.round(bet*(cfg.kei||0));
-    return{disc:d,bayar:b,menang:Math.round(bet+b+keiAmt),dp:cfg.d||0,keiAmt};
+    const keiAmt=bulatUang(bet*(cfg.kei||0));
+    return{disc:d,bayar:b,menang:bulatUang(bet+b+keiAmt),dp:cfg.d||0,keiAmt};
   };
 
   // CB/CB2D/CN: kembalikan disc/bayar saja; menang dihitung di kalkulasi() setelah match
@@ -691,12 +729,12 @@ function hitung(jenis, bet, pas){
     const idx=+jenis.slice(5);
     const x=arr[idx];if(!x)return nil;
     const d=dk(x.d||0),b=bet-d;
-    return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};
+    return{disc:d,bayar:b,menang:bulatUang(b+(bet*x.h)),dp:x.d||0};
   }
 
-  if(jenis==="CJ"){const x=P.CJ;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
-  if(jenis==="SHIO"){const x=P.SHIO;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
-  if(jenis==="KOMP"){const x=P.KOMP;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:Math.round(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="CJ"){const x=P.CJ;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:bulatUang(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="SHIO"){const x=P.SHIO;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:bulatUang(b+(bet*x.h)),dp:x.d||0};}
+  if(jenis==="KOMP"){const x=P.KOMP;if(!x)return nil;const d=dk(x.d||0),b=bet-d;return{disc:d,bayar:b,menang:bulatUang(b+(bet*x.h)),dp:x.d||0};}
   if(jenis==="TT")   return P.TT    ?fromKei(P.TT)   :nil;
   if(jenis==="5050") return P["5050"]?fromKei(P["5050"]):nil;
   if(jenis==="SH")   return P.SH    ?fromKei(P.SH)   :nil;
@@ -964,16 +1002,17 @@ function cocok(res, nom, jenis, pas, pos){
 // ═══════════════════════════════════════════════════════════════
 function buatPenjelasan(r, pas){
   const bet=r.bet, disc=r.disc, bayar=r.bayar, dp=r.dp, jenis=r.jenis, menang=r.menang;
-  const fmtN=n=>Math.round(n).toLocaleString('id-ID');
+  const fmtN=n=>bulatUang(n).toLocaleString('id-ID');
   const discPctStr=fmtPct(dp);
 
-  // Klasifikasi jenis untuk format penjelasan
+  // Klasifikasi jenis berdasarkan KODE jenis — BUKAN label.
+  // FIX BUG: label seperti "2D Tengah — Diskon" mengandung kata "Tengah"
+  // sehingga dulu salah tertangkap sebagai jenis Kei (Tengah/Tepi) dan
+  // ditampilkan dengan rumus "Bet kembali + Bayar + Kei" yang keliru.
+  const kode=r.kode||'';
   const isPrizeTipe  = r.isPrize;
   const isCBTipe     = r.isCB || r.isCB2D || r.isCN || r.isCB4D;
-  const isKeiTipe    = jenis.includes("Tengah")||jenis.includes("Tepi")||jenis.includes("50-50")||
-                       jenis.includes("50 - 50")||jenis.includes("Silang")||jenis.includes("Homo")||
-                       jenis.includes("Kembang")||jenis.includes("Kempis")||jenis.includes("Kembar")||
-                       jenis.includes("Dasar");
+  const isKeiTipe    = kode==='TT'||kode==='5050'||kode==='SH'||kode==='KK2'||kode.startsWith('DASAR_');
   const is4D3D2DTipe = !isCBTipe && !isKeiTipe;
 
   let html='<div class="exbox">';
@@ -1047,7 +1086,7 @@ const tcase=s=>String(s).toLowerCase().replace(/(^|[\s(/&-])([a-z])/g,(m,a,b)=>a
 const rapiNom=s=>{const x=String(s);return /[A-Za-z]/.test(x)?tcase(x.replace(/_/g,' ').replace(/@/g,' & ')):x;};
 
 function buatJawabanCS(r,pas,res,pasLbl){
-  const fmtN=n=>Math.round(n).toLocaleString('id-ID');
+  const fmtN=n=>bulatUang(n).toLocaleString('id-ID');
   const j=r.kode||'', nom=r.nomRaw||'', pos=r.posRaw||'';
   const is123=isPrize123(pas);
   const pr=is123?parseResult123(res):null;
@@ -1514,8 +1553,8 @@ function kalkulasi(){
   const hasil=[];
 
   // Ambil config pasaran untuk CB/CB2D/CN hadiah lookup
-  const resolvedPasConf=isPrize123(pas)?'UMUM':pas;
-  const Pconf=getConfig(resolvedPasConf);
+  // Resolusi config sepenuhnya lewat getConfig (CONFIG_ALIAS menangani Prize123)
+  const Pconf=getConfig(pas);
 
   activeIds.forEach((id,i)=>{
     const row=document.getElementById("r"+id);
@@ -1555,37 +1594,37 @@ function kalkulasi(){
 
     if(ok){
       if(c.isPrize&&pg){
-        if(pg==="Prize 1")      win=Math.round(c.menangP1||c.menang);
-        else if(pg==="Prize 2") win=Math.round(c.menangP2||c.menang);
-        else if(pg==="Prize 3") win=Math.round(c.menangP3||c.menang);
-        else                    win=Math.round(c.menang);
+        if(pg==="Prize 1")      win=bulatUang(c.menangP1||c.menang);
+        else if(pg==="Prize 2") win=bulatUang(c.menangP2||c.menang);
+        else if(pg==="Prize 3") win=bulatUang(c.menangP3||c.menang);
+        else                    win=bulatUang(c.menang);
       } else if(c.isBBC){
         // BB CAMPURAN: hadiah dipilih sesuai cara menang
         // TEPAT (susunan persis) → bet × t  |  ACAK (permutasi) → bet × b
-        win=bbGrup==="TEPAT"?Math.round(c.menangTepat):Math.round(c.menangAcak);
+        win=bbGrup==="TEPAT"?bulatUang(c.menangTepat):bulatUang(c.menangAcak);
       } else if(c.isCB){
         // CB: menang = bayar + (bet × hadiah sesuai kena)
         isCBFlag=true;
         const hMap=(Pconf.CB||{}).hadiah||{};
         hadiah=hMap[kena]||0;
-        win=Math.round(c.bayar+(bet*hadiah));
+        win=bulatUang(c.bayar+(bet*hadiah));
       } else if(c.isCB2D){
         // CB2D: menang = bayar + (bet × hadiah sesuai kena)
         isCB2DFlag=true;
         const hMap=(Pconf.CB2D||{}).hadiah||{};
         hadiah=hMap[kena]||0;
-        win=Math.round(c.bayar+(bet*hadiah));
+        win=bulatUang(c.bayar+(bet*hadiah));
       } else if(c.isCN){
         // CN: menang = bayar + (bet × hadiah sesuai posisi kena)
         isCNFlag=true;
         const hMap=(Pconf.CN||{}).hadiah||{};
         hadiah=hMap[kena]||0;
-        win=Math.round(c.bayar+(bet*hadiah));
+        win=bulatUang(c.bayar+(bet*hadiah));
       } else if(j.startsWith("CB4D_")){
         isCB4DFlag=true;
-        win=Math.round(c.menang);
+        win=bulatUang(c.menang);
       } else {
-        win=Math.round(c.menang);
+        win=bulatUang(c.menang);
       }
     }
 
@@ -1998,7 +2037,7 @@ function renderRef(){
 // ═══════════════════════════════════════════════════════════════
 // FORMAT + CLOCK + INIT
 // ═══════════════════════════════════════════════════════════════
-const fmt    = n => Math.round(n).toLocaleString('id-ID');
+const fmt    = n => bulatUang(n).toLocaleString('id-ID');
 const fmtPct = d => { const s=(+(d*100).toFixed(1)).toString(); return(s.endsWith('.0')?s.slice(0,-2):s)+'%'; };
 const updClk = () => document.getElementById("clk").textContent=new Date().toLocaleTimeString('id-ID');
 
