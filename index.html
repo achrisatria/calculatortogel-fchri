@@ -329,8 +329,7 @@ optgroup option{background:#0d1829;color:var(--text1);font-weight:400;font-size:
             </optgroup>
             <optgroup label="── PASARAN KHUSUS ──">
               <option value="TOTOMALI">TOTO MALI</option>
-              <option value="KK4D">KING KONG4D MALAM</option>
-              <option value="KK4D">KING KONG4D SORE</option>
+              <option value="KK4D">KING KONG4D</option>
               <option value="HOKI5D">HOKI DRAW 5D</option>
             </optgroup>
           </select>
@@ -1938,8 +1937,10 @@ function renderRef(){
   html+=block('HADIAH DISKON — HOKI DRAW 5D',['HADIAH','KALI','DISKON'],[
     ['5D','x50.000','38%'],['4D','x7.000','20%'],['3D','x750','20%'],['2D','x75','20%'],
   ]);
-  html+=block('HADIAH BOLAK BALIK — TEPAT & ACAK OTOMATIS (KECUALI HOKI DRAW)',['HADIAH','TEPAT','ACAK','DISKON BB'],[
-    ['4D','x4.000','x200','66.5%'],['3D','x400','x100','59.5%'],['2D','x70','x20','29.5%'],
+  html+=block('HADIAH BOLAK BALIK — TEPAT & ACAK OTOMATIS (KECUALI HOKI DRAW)',['HADIAH','TEPAT','ACAK','DISKON BB (Umum/Prize123 | Toto Mali | KK4D)'],[
+    ['4D','x4.000','x200','66.5% | 67% | 33%'],
+    ['3D','x400','x100','59.5% | 57% | 24%'],
+    ['2D','x70','x20','29.5% | 27% | 15%'],
     ['Varian','BB Diskon: bayar dipotong diskon','BB Tidak Diskon: bayar penuh','—'],
   ]);
   html+=block('HADIAH BOLAK BALIK — HOKI DRAW 5D (TEPAT & ACAK OTOMATIS)',['HADIAH','TEPAT','ACAK','DISKON BB'],[
@@ -1948,6 +1949,7 @@ function renderRef(){
   ]);
   html+=block('COLOK BEBAS — 1 DIGIT PILIH (Kategori Otomatis)',['KEMUNCULAN DIGIT DI RESULT','HADIAH','DISKON'],[
     ['1x muncul','x1.5','6%'],['2x muncul','x3','6%'],['3x muncul','x4.5','6%'],['4x muncul','x6','6%'],
+    ['5x muncul (khusus Hoki Draw 5D)','x6','6%'],
   ]);
   html+=block('COLOK BEBAS 2D — 2 DIGIT PILIH (Kategori Otomatis) | UMUM',['TOTAL KEMUNCULAN KEDUA DIGIT','HADIAH','DISKON'],[
     ['2 kemunculan','x7','10%'],['3 kemunculan','x11','10%'],['4 kemunculan','x18','10%'],
@@ -1961,7 +1963,7 @@ function renderRef(){
   html+=block('COLOK NAGA — 3 DIGIT PILIH (Kategori Otomatis)',['POSISI KENA DI RESULT','UMUM','HOKI DRAW 5D','DISKON'],[
     ['3 posisi kena','x23','x12','10%'],
     ['4 posisi kena','x35','x30','10%'],
-    ['5 posisi kena','x125','x125','10%'],
+    ['5 posisi kena (hanya mungkin di result 5 digit)','—','x125','10%'],
   ]);
   html+=block('COLOK JITU / SHIO / KOMBINASI',['JENIS','KALI','DISKON'],[
     ['Colok Jitu (pilih digit + posisi)','x8','6%'],
