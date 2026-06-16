@@ -470,8 +470,6 @@ input,select,textarea{width:100%;}
               <option value="UMUM">BULLSEYE</option>
               <option value="UMUM">CALIFORNIA</option>
               <option value="UMUM">CAROLINA EVENING</option>
-              <option value="UMUM">BANGKOK 0930</option>
-              <option value="UMUM">BANGKOK 0130</option>
               <option value="UMUM">NEW YORK EVENING</option>
               <option value="UMUM">NEW YORK MIDDAY</option>
               <option value="UMUM">FLORIDA EVENING</option>
@@ -486,15 +484,26 @@ input,select,textarea{width:100%;}
             </optgroup>
             <optgroup label="── PASARAN PRIZE 1-2-3 ──">
               <option value="TOTO_CAMBODIA">TOTO CAMBODIA LIVE</option>
-              <option value="POIPET">POIPET LOTTERY</option>
-              <option value="HUAHIN">HUAHIN LOTTERY</option>
+              <option value="POIPET12">POIPET12</option>
+              <option value="POIPET15">POIPET15</option>
+              <option value="POIPET19">POIPET19</option>
+              <option value="POIPET22">POIPET22</option>
+              <option value="HUAHIN0100">HUAHIN 0100</option>
+              <option value="HUAHIN1630">HUAHIN 1630</option>
+              <option value="HUAHIN2100">HUAHIN 2100</option>
               <option value="SYDNEY">SYDNEY LOTTO</option>
               <option value="SINGAPORE">SINGAPORE</option>
               <option value="MAGNUM4D">MAGNUM4D</option>
               <option value="NEVADA">NEVADA</option>
-              <option value="BANGKOK_POOLS">BANGKOK POOLS</option>
-              <option value="BRUNEI_POOLS">BRUNEI POOLS</option>
-              <option value="CHELSEA_POOLS">CHELSEA POOLS</option>
+              <option value="BANGKOK0930">BANGKOK 0930</option>
+              <option value="BANGKOK0130">BANGKOK 0130</option>
+              <option value="BRUNEI02">BRUNEI02</option>
+              <option value="BRUNEI14">BRUNEI14</option>
+              <option value="BRUNEI21">BRUNEI21</option>
+              <option value="CHELSEA11">CHELSEA11</option>
+              <option value="CHELSEA15">CHELSEA15</option>
+              <option value="CHELSEA19">CHELSEA19</option>
+              <option value="CHELSEA21">CHELSEA21</option>
               <option value="HONGKONG">HONGKONG LOTTO</option>
             </optgroup>
             <optgroup label="── PASARAN KHUSUS ──">
@@ -689,8 +698,12 @@ try{
 // PRIZE123 CONFIG
 // ═══════════════════════════════════════════════════════════════
 const PRIZE123_PASARAN = new Set([
-  "TOTO_CAMBODIA","POIPET","HUAHIN","SYDNEY","SINGAPORE",
-  "MAGNUM4D","NEVADA","BANGKOK_POOLS","BRUNEI_POOLS","CHELSEA_POOLS","HONGKONG"
+  "TOTO_CAMBODIA","SYDNEY","SINGAPORE","MAGNUM4D","NEVADA","HONGKONG",
+  "POIPET12","POIPET15","POIPET19","POIPET22",
+  "HUAHIN0100","HUAHIN1630","HUAHIN2100",
+  "BANGKOK0930","BANGKOK0130",
+  "BRUNEI02","BRUNEI14","BRUNEI21",
+  "CHELSEA11","CHELSEA15","CHELSEA19","CHELSEA21"
 ]);
 function isPrize123(pas){ return PRIZE123_PASARAN.has(pas); }
 
@@ -775,9 +788,13 @@ const H = {
 // Pasaran di daftar ini MEWARISI config pasaran lain.
 // Tambahkan pasaran baru di sini jika ia meminjam config yang sudah ada.
 const CONFIG_ALIAS={
-  TOTO_CAMBODIA:'UMUM', POIPET:'UMUM', HUAHIN:'UMUM', SYDNEY:'UMUM',
-  SINGAPORE:'UMUM', MAGNUM4D:'UMUM', NEVADA:'UMUM', BANGKOK_POOLS:'UMUM',
-  BRUNEI_POOLS:'UMUM', CHELSEA_POOLS:'UMUM', HONGKONG:'UMUM'
+  TOTO_CAMBODIA:'UMUM', SYDNEY:'UMUM', SINGAPORE:'UMUM', MAGNUM4D:'UMUM',
+  NEVADA:'UMUM', HONGKONG:'UMUM',
+  POIPET12:'UMUM', POIPET15:'UMUM', POIPET19:'UMUM', POIPET22:'UMUM',
+  HUAHIN0100:'UMUM', HUAHIN1630:'UMUM', HUAHIN2100:'UMUM',
+  BANGKOK0930:'UMUM', BANGKOK0130:'UMUM',
+  BRUNEI02:'UMUM', BRUNEI14:'UMUM', BRUNEI21:'UMUM',
+  CHELSEA11:'UMUM', CHELSEA15:'UMUM', CHELSEA19:'UMUM', CHELSEA21:'UMUM'
 };
 
 // Gabung 2 tingkat: kunci grup (DISC/FULL/BB/...) milik sendiri menimpa
@@ -1377,6 +1394,12 @@ const rapiNom=s=>{const x=String(s);return /[A-Za-z]/.test(x)?tcase(x.replace(/_
 function buatJawabanCS(r,pas,res,pasLbl){
   const fmtN=n=>bulatUang(n).toLocaleString('id-ID');
   const j=r.kode||'', nom=r.nomRaw||'', pos=r.posRaw||'';
+  // FIX #5: terjemahkan kode ukuran (2D/3D/4D/5D/2DDP/2DTG) ke istilah ramah
+  // agar tidak muncul kode mentah di tengah teks jawaban member.
+  const namaUkuran=k=>({
+    '5D':'5D (5 angka)','4D':'4D (4 angka)','3D':'3D (3 angka)',
+    '2D':'2D belakang','2DDP':'2D depan','2DTG':'2D tengah'
+  }[k]||k);
   const is123=isPrize123(pas);
   const pr=is123?parseResult123(res):null;
   const base=(is123&&pr&&pr.valid)?pr.p1:res;   // patokan jenis non-Prize
@@ -1438,7 +1461,7 @@ function buatJawabanCS(r,pas,res,pasLbl){
   } else if(j.startsWith('BB_')){
     const k=j.indexOf('5D')>-1?'5D':j.indexOf('4D')>-1?'4D':j.indexOf('3D')>-1?'3D':'2D';
     const pat=k==='5D'?base:k==='4D'?r4:k==='3D'?r3:r2;
-    ket='Patokan '+k+' = '+pat+'. Bolak-balik menang jika nomor persis sama (hadiah tepat) atau merupakan susunan acak/permutasinya (hadiah acak).';
+    ket='Patokan '+namaUkuran(k)+' = '+pat+'. Bolak-balik menang jika nomor persis sama (hadiah tepat) atau merupakan susunan acak/permutasinya (hadiah acak).';
     if(r.cocok&&r.bbGrup) ket+=' Nomor bosku '+(r.bbGrup==='TEPAT'?'persis sama -> dibayar hadiah tepat.':'merupakan susunan acak -> dibayar hadiah acak.');
     else if(!r.cocok) ket+=' Nomor bosku bukan susunan dari angka patokan tersebut.';
   } else if(j.startsWith('PRIZE_')){
@@ -1448,10 +1471,11 @@ function buatJawabanCS(r,pas,res,pasLbl){
   } else if(j.startsWith('DISC_')||j.startsWith('FULL_')){
     const k=j.slice(j.indexOf('_')+1);
     const pat=k==='5D'?base:k==='4D'?r4:k==='3D'?r3:k==='2DDP'?r2dp:k==='2DTG'?r2tg:r2;
-    const posNm=k==='2DDP'?'2 digit depan':k==='2DTG'?'2 digit tengah':k==='2D'?'2 digit belakang':k;
-    ket='Patokan '+posNm+' = '+pat+'. Nomor harus persis sama untuk menang.';
+    ket='Patokan '+namaUkuran(k)+' = '+pat+'. Nomor harus persis sama untuk menang.';
   }
   if(ket) t+=ket+'\n\n';
+  else if(['SH','KK2','CJ'].includes(j) && !pos)
+    t+='Catatan: posisi taruhan (Depan/Tengah/Belakang atau AS/KOP/Kepala/Ekor) belum lengkap, sehingga rincian posisi tidak dapat ditampilkan.\n\n';
 
   if(r.cocok){
     let extra='';
@@ -1471,8 +1495,15 @@ function buatJawabanCS(r,pas,res,pasLbl){
     t+='Selamat ya bosku, terima kasih.';
   } else {
     t+='Status: Tidak menang\n';
+    // FIX #1: tampilkan rincian modal yang hangus (kerugian) pada tiket kalah,
+    // sebelumnya tiket kalah tidak menyebut angka sama sekali.
+    t+='Rincian:\n';
+    t+='- Bet : Rp '+fmtN(r.bet)+'\n';
+    if(r.dp>0) t+='- Diskon '+fmtPct(r.dp)+' : -Rp '+fmtN(r.disc)+'\n';
+    t+='- Bayar (modal) : Rp '+fmtN(r.bayar)+'\n';
+    t+='- Kerugian : -Rp '+fmtN(r.bayar)+'\n';
     if(r.nearMiss){
-      t+='Catatan: nomor bosku memang muncul di '+r.nearMiss+' ('+r.nearVal+'), namun semua jenis taruhan full / diskon / bolak-balik hanya berpatokan pada Prize 1. Jika ingin nomor dihitung ke Prize 1, 2, dan 3 sekaligus, silakan gunakan jenis taruhan "Prize" — hadiahnya otomatis menyesuaikan baris yang kena.\n';
+      t+='\nCatatan: nomor bosku memang muncul di '+r.nearMiss+' ('+r.nearVal+'), namun semua jenis taruhan full / diskon / bolak-balik hanya berpatokan pada Prize 1. Jika ingin nomor dihitung ke Prize 1, 2, dan 3 sekaligus, silakan gunakan jenis taruhan "Prize" — hadiahnya otomatis menyesuaikan baris yang kena.\n';
     }
     t+='\nSemangat ya bosku, semoga next round lebih beruntung.';
   }
