@@ -430,7 +430,7 @@ input,select,textarea{width:100%;}
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
     </div>
     <div>
-      <div class="logo-txt">CALCULATOR HOKIJITU</div>
+      <div class="logo-txt">LOTTERY CALCULATOR</div>
       <div class="logo-sub">Settlement Dashboard</div>
     </div>
   </div>
@@ -1424,7 +1424,10 @@ function buatJawabanCS(r,pas,res,pasLbl){
   const r2dp=base.slice(0,2);
   const r2tg=base.length>=4?base.slice(base.length-3,base.length-1):'';
 
-  let t='Halo bosku, izin menjelaskan hasil taruhan '+r.jenis+' dengan nomor bettingan anda '+rapiNom(r.nomor)+' di pasaran '+tcase(pasLbl)+'.\n\n';
+  const sapaanObjek = (r.kode==='SHIO')
+    ? 'dengan tebakan shio anda '+rapiNom(r.nomor)
+    : 'dengan nomor bettingan anda '+rapiNom(r.nomor);
+  let t='Halo bosku, izin menjelaskan hasil taruhan '+r.jenis+' '+sapaanObjek+' di pasaran '+tcase(pasLbl)+'.\n\n';
   t+='Result: '+res+'\n';
   if(is123&&pr&&pr.valid){
     t+='- Prize 1 : '+pr.p1+'\n- Prize 2 : '+pr.p2+'\n- Prize 3 : '+pr.p3+'\n';
