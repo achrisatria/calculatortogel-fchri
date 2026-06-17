@@ -222,6 +222,23 @@ select option{background:#0d1829;color:var(--text1);}
   font-size:.7rem;line-height:1.62;color:var(--text2);
   max-height:240px;overflow:auto;
 }
+/* ── PANEL JAWABAN: kartu siap-copy per tiket ── */
+.jw-intro{font-size:.68rem;color:var(--text3);line-height:1.5;margin-bottom:12px;}
+.jw-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px 13px;margin-bottom:12px;
+}
+.jw-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;}
+.jw-title{font-size:.72rem;font-weight:600;color:var(--text1);letter-spacing:.2px;}
+.jw-badge{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.jw-badge.menang{background:var(--green-dim);color:var(--green);}
+.jw-badge.kalah{background:var(--surface);color:var(--text3);border:1px solid var(--border);}
+.jw-text{
+  white-space:pre-wrap;word-break:break-word;margin:0 0 10px;
+  background:rgba(0,0,0,.18);border:1px solid var(--border);border-radius:var(--rs);
+  padding:11px 13px;font-family:var(--font);font-size:.72rem;line-height:1.7;color:var(--text1);
+}
 .rm-btn{
   width:26px;height:26px;background:transparent;border:1px solid var(--border);
   color:var(--text3);border-radius:5px;cursor:pointer;
@@ -413,7 +430,7 @@ input,select,textarea{width:100%;}
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
     </div>
     <div>
-      <div class="logo-txt">Calculator Togel Hokijitu</div>
+      <div class="logo-txt">LOTTERY CALCULATOR</div>
       <div class="logo-sub">Settlement Dashboard</div>
     </div>
   </div>
@@ -1407,7 +1424,7 @@ function buatJawabanCS(r,pas,res,pasLbl){
   const r2dp=base.slice(0,2);
   const r2tg=base.length>=4?base.slice(base.length-3,base.length-1):'';
 
-  let t='Halo bosku, izin menjelaskan hasil taruhan '+r.jenis+' nomor '+rapiNom(r.nomor)+' di pasaran '+tcase(pasLbl)+'.\n\n';
+  let t='Halo bosku, izin menjelaskan hasil taruhan '+r.jenis+' dengan nomor bettingan anda '+rapiNom(r.nomor)+' di pasaran '+tcase(pasLbl)+'.\n\n';
   t+='Result: '+res+'\n';
   if(is123&&pr&&pr.valid){
     t+='- Prize 1 : '+pr.p1+'\n- Prize 2 : '+pr.p2+'\n- Prize 3 : '+pr.p3+'\n';
@@ -1461,9 +1478,13 @@ function buatJawabanCS(r,pas,res,pasLbl){
   } else if(j.startsWith('BB_')){
     const k=j.indexOf('5D')>-1?'5D':j.indexOf('4D')>-1?'4D':j.indexOf('3D')>-1?'3D':'2D';
     const pat=k==='5D'?base:k==='4D'?r4:k==='3D'?r3:r2;
-    ket='Patokan '+namaUkuran(k)+' = '+pat+'. Bolak-balik menang jika nomor persis sama (hadiah tepat) atau merupakan susunan acak/permutasinya (hadiah acak).';
-    if(r.cocok&&r.bbGrup) ket+=' Nomor bosku '+(r.bbGrup==='TEPAT'?'persis sama -> dibayar hadiah tepat.':'merupakan susunan acak -> dibayar hadiah acak.');
-    else if(!r.cocok) ket+=' Nomor bosku bukan susunan dari angka patokan tersebut.';
+    if(r.cocok&&r.bbGrup==='TEPAT'){
+      ket='Untuk jenis bettingan BB yang anda betting sama persis (tepat) pada keluaran result pasaran tersebut ya bosku.';
+    } else if(r.cocok&&r.bbGrup==='ACAK'){
+      ket='Untuk jenis bettingan BB yang anda betting merupakan susunan acak (bolak-balik) dari keluaran result pasaran tersebut ya bosku, sehingga dibayar dengan hadiah acak.';
+    } else {
+      ket='Untuk hasil result pasaran tersebut tidak sesuai dengan nomor yang anda betting, baik secara tepat maupun susunan acaknya ya bosku.';
+    }
   } else if(j.startsWith('PRIZE_')){
     ket='Jenis taruhan Prize dicek ke ketiga baris (Prize 1, 2, dan 3).';
     if(r.cocok&&r.prizeGrup) ket+=' Nomor bosku cocok di '+r.prizeGrup+'.';
@@ -1471,7 +1492,19 @@ function buatJawabanCS(r,pas,res,pasLbl){
   } else if(j.startsWith('DISC_')||j.startsWith('FULL_')){
     const k=j.slice(j.indexOf('_')+1);
     const pat=k==='5D'?base:k==='4D'?r4:k==='3D'?r3:k==='2DDP'?r2dp:k==='2DTG'?r2tg:r2;
-    ket='Patokan '+namaUkuran(k)+' = '+pat+'. Nomor harus persis sama untuk menang.';
+    if(r.cocok){
+      ket='Patokan '+namaUkuran(k)+' = '+pat+'. Nomor anda sama persis dengan result sehingga dinyatakan menang.';
+    } else {
+      ket='Untuk hasil result pasaran tersebut tidak sesuai dengan nomor yang anda betting, yang dimana untuk nomor bettingan anda harus sama persis dengan nomor result.';
+      // Deteksi: jika nomor betting adalah susunan acak (permutasi) dari patokan,
+      // beri saran bahwa jenis BB akan menang. Hanya untuk ukuran 2D/3D/4D/5D.
+      const nomCek=(nom||r.nomor||'').replace(/\D/g,'');
+      const sortStr=s=>s.split('').sort().join('');
+      if(['5D','4D','3D','2D'].includes(k) && nomCek.length===pat.length &&
+         nomCek!==pat && sortStr(nomCek)===sortStr(pat)){
+        ket+='\nNamun anda akan menang apabila membetting dengan jenis taruhan BB (Bolak-Balik), karena nomor yang anda betting merupakan susunan acak dari keluaran result ya bosku.';
+      }
+    }
   }
   if(ket) t+=ket+'\n\n';
   else if(['SH','KK2','CJ'].includes(j) && !pos)
@@ -1480,7 +1513,7 @@ function buatJawabanCS(r,pas,res,pasLbl){
   if(r.cocok){
     let extra='';
     if(r.prizeGrup&&r.prizeGrup!=='PRIZE') extra=' ('+r.prizeGrup+')';
-    if(r.bbGrup) extra=' ('+(r.bbGrup==='TEPAT'?'Tepat':'Acak')+')';
+    if(r.bbGrup) extra=' ('+(r.bbGrup==='TEPAT'?'BB Tepat':'BB Acak')+')';
     if(r.isCB&&r.kena)   extra=' ('+r.kena+' digit)';
     if(r.isCB2D&&r.kena) extra=' ('+r.kena+' kemunculan)';
     if(r.isCN&&r.kena)   extra=' ('+r.kena+' posisi)';
@@ -2031,166 +2064,33 @@ function kalkulasi(){
 
   let exHtml='';
 
-  if(menangRows.length>0&&losRows.length===0){
-    const prizeList=menangRows.filter(r=>r.prizeGrup).map(r=>r.prizeGrup);
-    const uniquePrize=[...new Set(prizeList)];
-    if(isPas123&&uniquePrize.length>0){
-      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.6;">Selamat, taruhan Anda menang pada <span style="color:var(--amber)">'+uniquePrize.join(' &amp; ')+'</span> bosku.</div>';
-    } else {
-      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--green);margin-bottom:12px;line-height:1.5;">Selamat, semua taruhan Anda menang sesuai result yang keluar, bosku.</div>';
-    }
-  } else if(menangRows.length>0&&losRows.length>0){
-    const prizeList=menangRows.filter(r=>r.prizeGrup).map(r=>r.prizeGrup);
-    const uniquePrize=[...new Set(prizeList)];
-    if(isPas123&&uniquePrize.length>0){
-      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.6;">Selamat untuk taruhan yang menang pada <span style="color:var(--amber)">'+uniquePrize.join(' &amp; ')+'</span>, bosku.</div>';
-    } else {
-      exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text1);margin-bottom:12px;line-height:1.5;">Berikut rincian taruhan yang menang, bosku.</div>';
-    }
-  } else {
-    exHtml+='<div style="font-size:.82rem;font-weight:700;color:var(--text2);margin-bottom:12px;line-height:1.5;">Belum beruntung kali ini, bosku. Coba lagi ya.</div>';
-  }
-
-  // Info Prize123 win detail
-  if(isPas123&&menangRows.length>0){
-    const prizeWins=menangRows.filter(r=>r.prizeGrup);
-    if(prizeWins.length>0){
-      prizeWins.forEach(r=>{
-        const grpNum=r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
-        const parsed=parseResult123(res);
-        const grpResult=r.prizeGrup==="Prize 1"?parsed.p1:r.prizeGrup==="Prize 2"?parsed.p2:parsed.p3;
-        exHtml+=
-          '<div class="exbox" style="border-left-color:var(--amber);margin-bottom:8px;font-size:.74rem;">'+
-            '<strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+
-            'keluar pada <strong style="color:var(--amber)">'+esc(r.prizeGrup)+'</strong> '+
-            '(grup <strong>'+grpNum+'</strong> dari result = <span class="ef mono">'+esc(grpResult)+'</span>).'+
-          '</div>';
-      });
-    }
-    const nonPrizeWins=menangRows.filter(r=>!r.prizeGrup);
-    if(nonPrizeWins.length>0){
-      const parsed=parseResult123(res);
-      exHtml+=
-        '<div class="exbox" style="border-left-color:var(--accent);margin-bottom:8px;font-size:.74rem;">'+
-          'Taruhan jenis <strong>selain Prize</strong> pada pasaran ini menggunakan patokan '+
-          '<strong style="color:var(--accent)">4 angka pertama (Prize 1)</strong> '+
-          'dari result yaitu <span class="ef mono">'+esc(parsed.p1)+'</span> bosku.'+
-        '</div>';
-    }
-  }
-
-  // Tiket menang — tiap tiket dapat tombol Salin Jawaban
+  // PANEL JAWABAN — hanya menampilkan teks jawaban siap-copy untuk member.
+  // Tidak ada lagi penjelasan teknis/breakdown berwarna agar tidak ramai.
   const pasLblCS=document.getElementById("inPasaran").selectedOptions[0].text;
-  if(menangRows.length){
-    menangRows.forEach(r=>{
-      exHtml+='<div style="margin-bottom:4px;">'+buatPenjelasan(r,pas)+'</div>';
-      const txtCS=buatJawabanCS(r,pas,res,pasLblCS);
-      const ci=csAnswers.push(txtCS)-1;
-      exHtml+=
-        '<div style="margin:0 0 12px;">'+
-          '<div class="cs-preview">'+esc(txtCS)+'</div>'+
-          '<button class="copy-btn" onclick="salinJawaban('+ci+',this)">&#128203; Salin Jawaban untuk Member</button>'+
-        '</div>';
-    });
+  exHtml+='<div class="jw-intro">Salin jawaban di bawah ini untuk dikirim ke member. Setiap kartu adalah jawaban lengkap per taruhan.</div>';
+
+  function kartuJawaban(judul, txt, badge){
+    const ci=csAnswers.push(txt)-1;
+    return '<div class="jw-card">'+
+             '<div class="jw-head">'+
+               '<span class="jw-title">'+esc(judul)+'</span>'+
+               (badge?'<span class="jw-badge '+badge.cls+'">'+esc(badge.txt)+'</span>':'')+
+             '</div>'+
+             '<pre class="jw-text">'+esc(txt)+'</pre>'+
+             '<button class="copy-btn" onclick="salinJawaban('+ci+',this)">Salin Jawaban</button>'+
+           '</div>';
   }
 
-  // Tiket kalah
-  if(losRows.length){
-    exHtml+=
-      '<div style="margin-top:10px;margin-bottom:8px;font-size:.75rem;font-weight:700;color:var(--red);">'+
-        'Taruhan yang belum beruntung ('+losRows.length+' tiket):'+
-      '</div>';
-    const pasLbl=document.getElementById("inPasaran").selectedOptions[0].text;
-    losRows.forEach(r=>{
-      let ket='';
-      if(r.nearMiss){
-        const prNM=parseResult123(res);
-        ket='tidak menang karena patokan jenis taruhan ini adalah <strong>Prize 1</strong> '+
-            '(<span class="ef mono">'+esc(prNM.p1)+'</span>), walaupun nomornya muncul di '+
-            '<strong style="color:var(--amber)">'+esc(r.nearMiss)+'</strong> '+
-            '(<span class="ef mono">'+esc(r.nearVal)+'</span>).';
-      } else if(isPas123&&r.prizeGrup){
-        const grpNum=r.prizeGrup==="Prize 1"?"pertama":r.prizeGrup==="Prize 2"?"kedua":"ketiga";
-        ket='tidak cocok dengan hasil <strong>'+esc(r.prizeGrup)+'</strong> (grup '+grpNum+' result).';
-      } else if(isPas123){
-        const parsed=parseResult123(res);
-        ket='tidak cocok dengan patokan 4 angka pertama <span class="ef mono">'+esc(parsed.p1)+'</span> dari result.';
-      } else {
-        ket='tidak cocok dengan result.';
-      }
-      exHtml+=
-        '<div class="exbox" style="margin-bottom:6px;">'+
-          '- <strong>'+esc(r.jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> '+ket+
-        '</div>';
-
-      // Tombol Salin Jawaban untuk SEMUA tiket kalah, dengan pratinjau teks.
-      // Kasus near-miss Prize 2/3 mendapat box penjelasan tambahan.
-      const txtCS=buatJawabanCS(r,pas,res,pasLbl);
-      const ci=csAnswers.push(txtCS)-1;
-      if(r.nearMiss){
-        exHtml+=
-          '<div class="nearmiss-box">'+
-            '<strong style="color:var(--amber)">&#8505; Kenapa tidak menang padahal nomor keluar di '+esc(r.nearMiss)+'?</strong><br>'+
-            'Semua jenis taruhan <strong>Full / Diskon / Bolak-Balik</strong> pada pasaran Prize 123 hanya berpatokan pada <strong>Prize 1</strong> — baris kedua dan ketiga bukan patokan jenis taruhan ini. '+
-            'Nomor <span class="ef mono">'+esc(r.nomor)+'</span> muncul di '+esc(r.nearMiss)+' (<span class="ef mono">'+esc(r.nearVal)+'</span>), sehingga hanya menang jika memakai jenis taruhan <strong>Prize</strong>.'+
-            '<div class="cs-preview">'+esc(txtCS)+'</div>'+
-            '<button class="copy-btn" onclick="salinJawaban('+ci+',this)">&#128203; Salin Jawaban untuk Member</button>'+
-          '</div>';
-      } else {
-        exHtml+=
-          '<div style="margin:-2px 0 10px;">'+
-            '<div class="cs-preview">'+esc(txtCS)+'</div>'+
-            '<button class="copy-btn" onclick="salinJawaban('+ci+',this)">&#128203; Salin Jawaban untuk Member</button>'+
-          '</div>';
-      }
-    });
-  }
-
-  // Rekap akhir — siapkan juga teks "Salin Rekap Lengkap"
-  let rkTxt='Rekap taruhan bosku\nPasaran: '+tcase(pasLblCS)+'\nResult: '+res+'\n\n';
-  hasil.forEach((r,i)=>{
-    rkTxt+=(i+1)+'. '+r.jenis+' — '+rapiNom(r.nomor)+' — Bet Rp '+fmt(r.bet)+' -> '+
-           (r.cocok?'Menang Rp '+fmt(r.menang):'Tidak menang')+'\n';
+  // Kartu per tiket (menang lebih dulu, lalu kalah) — urutan mengikuti hasil
+  menangRows.forEach(r=>{
+    const txtCS=buatJawabanCS(r,pas,res,pasLblCS);
+    exHtml+=kartuJawaban(r.jenis+' — '+rapiNom(r.nomor), txtCS, {cls:'menang',txt:'Menang'});
   });
-  rkTxt+='\nTotal bet : Rp '+fmt(tBet)+'\n';
-  if(tDisc>0) rkTxt+='Total diskon : -Rp '+fmt(tDisc)+'\n';
-  rkTxt+='Total bayar : Rp '+fmt(tBayar)+'\n';
-  rkTxt+='Total kemenangan : Rp '+fmt(tMenang)+'\n';
-  rkTxt+=(profit>=0?'Profit : +Rp ':'Loss : -Rp ')+fmt(Math.abs(profit))+'\n\nTerima kasih bosku.';
-  const ciRekap=csAnswers.push(rkTxt)-1;
+  losRows.forEach(r=>{
+    const txtCS=buatJawabanCS(r,pas,res,pasLblCS);
+    exHtml+=kartuJawaban(r.jenis+' — '+rapiNom(r.nomor), txtCS, {cls:'kalah',txt:'Tidak Menang'});
+  });
 
-  const profitSign=profit>=0?'+':'-';
-  const profitCls=profit>=0?'tgr':'tr';
-  const plbl=esc(document.getElementById("inPasaran").selectedOptions[0].text);
-  exHtml+=
-    '<div style="margin-top:14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;font-size:.75rem;">'+
-      '<div style="font-size:.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--text2);font-weight:600;margin-bottom:10px;">Rekap Akhir</div>'+
-      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
-        '<span class="td">Total Bet</span><span class="mono tb">Rp '+fmt(tBet)+'</span>'+
-      '</div>'+
-      (tDisc>0?
-        '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
-          '<span class="td">Total Diskon</span><span class="mono tp">- Rp '+fmt(tDisc)+'</span>'+
-        '</div>':'')+
-      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border2);font-weight:700;">'+
-        '<span>Total Bayar</span><span class="mono tg">Rp '+fmt(tBayar)+'</span>'+
-      '</div>'+
-      '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">'+
-        '<span class="td">Total Kemenangan</span><span class="mono tgr">Rp '+fmt(tMenang)+'</span>'+
-      '</div>'+
-      '<div style="display:flex;justify-content:space-between;padding:6px 0 0;font-weight:700;">'+
-        '<span>Profit / Loss</span>'+
-        '<span class="mono '+profitCls+'">'+profitSign+' Rp '+fmt(Math.abs(profit))+'</span>'+
-      '</div>'+
-      (profit<0
-        ? '<div style="margin-top:6px;font-size:.62rem;color:var(--text2);">Semangat ya bosku, next round lebih beruntung.</div>'
-        : '<div style="margin-top:6px;font-size:.62rem;color:var(--green);">Keuntungan = Menang ('+fmt(tMenang)+') - Bayar ('+fmt(tBayar)+')</div>'
-      )+
-      '<div style="margin-top:10px;">'+
-        '<div class="cs-preview">'+esc(rkTxt)+'</div>'+
-        '<button class="copy-btn" onclick="salinJawaban('+ciRekap+',this)">&#128203; Salin Rekap Lengkap</button>'+
-      '</div>'+
-    '</div>';
   ep.innerHTML=exHtml;
 
   // Breakdown box kiri
@@ -2204,7 +2104,7 @@ function kalkulasi(){
     '<div class="bd-row"><span class="td">Total Kemenangan</span><span class="mono tgr">Rp '+fmt(tMenang)+'</span></div>'+
     '<div class="bd-row tot"><span>Profit / Loss</span><span class="mono '+(profit>=0?'tgr':'tr')+'">'+(profit>=0?'+':'-')+' Rp '+fmt(Math.abs(profit))+'</span></div>'+
     '<div style="margin-top:8px;font-size:.65rem;color:var(--text3);">'+
-      'Result: <span class="mono tg">'+resDisplay+'</span> | Pasaran: <span style="color:var(--accent)">'+plbl+'</span> | '+esc(new Date().toLocaleString('id-ID'))+
+      'Result: <span class="mono tg">'+resDisplay+'</span> | Pasaran: <span style="color:var(--accent)">'+esc(pasLblCS)+'</span> | '+esc(new Date().toLocaleString('id-ID'))+
     '</div>';
 
   sw('hasil',document.querySelector('.tab'));
