@@ -280,16 +280,6 @@ select option{background:#0d1829;color:var(--text1);}
 .bp1{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.3);}
 .bp2{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
 .bp3{background:rgba(77,166,255,.12);color:var(--accent);border:1px solid rgba(77,166,255,.3);}
-.exbox{
-  font-size:.75rem;color:var(--text1);line-height:1.75;
-  background:rgba(255,255,255,.025);border:1px solid var(--border);
-  border-left:2px solid var(--accent);
-  padding:10px 14px;border-radius:0 var(--rs) var(--rs) 0;margin-bottom:8px;
-}
-.exbox .ef{color:var(--amber);font-family:var(--mono);font-size:.8rem;}
-.exbox .ev{color:var(--green);font-weight:600;}
-.exbox .ek{color:var(--red);}
-.exbox strong{color:var(--text1);font-weight:600;}
 .ref-card{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;font-size:.73rem;}
 .ref-ttl{color:var(--accent);font-weight:600;margin-bottom:5px;font-size:.64rem;text-transform:uppercase;letter-spacing:.8px;}
 .ref-row{display:flex;justify-content:space-between;color:var(--text2);padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);}
@@ -1318,84 +1308,6 @@ function cocok(res, nom, jenis, pas, pos){
     return cocokStandard(p1, nom, jenis, pos);
   }
   return cocokStandard(res, nom, jenis, pos);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PENJELASAN KEMENANGAN
-// ═══════════════════════════════════════════════════════════════
-function buatPenjelasan(r, pas){
-  const bet=r.bet, disc=r.disc, bayar=r.bayar, dp=r.dp, jenis=r.jenis, menang=r.menang;
-  const fmtN=n=>bulatUang(n).toLocaleString('id-ID');
-  const discPctStr=fmtPct(dp);
-
-  // Klasifikasi jenis berdasarkan KODE jenis — BUKAN label.
-  // FIX BUG: label seperti "2D Tengah — Diskon" mengandung kata "Tengah"
-  // sehingga dulu salah tertangkap sebagai jenis Kei (Tengah/Tepi) dan
-  // ditampilkan dengan rumus "Bet kembali + Bayar + Kei" yang keliru.
-  const kode=r.kode||'';
-  const isPrizeTipe  = r.isPrize;
-  const isCBTipe     = r.isCB || r.isCB2D || r.isCN || r.isCB4D;
-  const isKeiTipe    = kode==='TT'||kode==='5050'||kode==='SH'||kode==='KK2'||kode.startsWith('DASAR_');
-  const is4D3D2DTipe = !isCBTipe && !isKeiTipe;
-
-  let html='<div class="exbox">';
-
-  if(is4D3D2DTipe){
-    html+='<strong>'+esc(jenis)+'</strong> — Nomor <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
-    if(r.prizeGrup && isPrize123(pas)){
-      const pgColor=r.prizeGrup==="Prize 1"?"var(--amber)":r.prizeGrup==="Prize 2"?"var(--purple)":"var(--accent)";
-      html+=' <span style="color:'+pgColor+';font-weight:700;">('+esc(r.prizeGrup)+')</span>';
-    }
-    html+='<br>';
-    if(dp>0){
-      html+='Bayar: Rp <span class="ef">'+fmtN(bet)+'</span> &minus; Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Rp <span class="ef">'+fmtN(bayar)+'</span>';
-      html+='<br>';
-    }
-    const multi=menang/bet;
-    const multiStr=multi%1===0?multi.toFixed(0):multi.toFixed(1).replace(/\.0$/,'');
-    html+='Rumus: Bet &times; hadiah = Rp <span class="ef">'+fmtN(bet)+'</span> &times; <span class="ef">'+multiStr+'&times;</span> = <span class="ev">Rp '+fmtN(menang)+'</span>';
-    html+='<br>Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
-
-  } else if(isCBTipe){
-    // CB/CB2D/CN/CB4D — rumus: bayar kembali + (bet × hadiah)
-    let kenaLabel='';
-    if(r.isCB)   kenaLabel='kena <span class="ef">'+r.kena+' digit</span>';
-    if(r.isCB2D) kenaLabel='total kemunculan <span class="ef">'+r.kena+' digit</span>';
-    if(r.isCN)   kenaLabel=r.kena+' posisi kena';
-    if(r.isCB4D) kenaLabel='cocok semua digit';
-
-    html+='<strong>'+esc(jenis)+'</strong> — '+kenaLabel+' di result!';
-    html+='<br>';
-    if(dp>0){
-      html+='Bayar: Rp <span class="ef">'+fmtN(bet)+'</span> &minus; Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Rp <span class="ef">'+fmtN(bayar)+'</span>';
-      html+='<br>';
-    }
-    const hadiahMurni=menang-bayar;
-    const multi=r.hadiah||(hadiahMurni/bet);
-    const multiStr=typeof multi==='number'?(multi%1===0?multi.toFixed(0):multi.toFixed(1).replace(/\.0$/,'')):String(multi);
-    html+='Rumus: Bayar kembali + (Bet &times; hadiah)';
-    html+=' = Rp <span class="ef">'+fmtN(bayar)+'</span> + (Rp <span class="ef">'+fmtN(bet)+'</span> &times; <span class="ef">'+multiStr+'&times;</span>)';
-    html+=' = <span class="ev">Rp '+fmtN(menang)+'</span>';
-    html+='<br>Profit bersih: <span class="ev">+Rp '+fmtN(menang-bayar)+'</span>';
-
-  } else {
-    // Kei-based (TT/5050/SH/KK2/DASAR)
-    const keiAmt=r.keiAmt||0;
-    const keiSign=keiAmt>=0?'+':'-';
-    html+='<strong>'+esc(jenis)+'</strong> — Pilihan <span class="ef">'+esc(r.nomor)+'</span> sesuai result!';
-    html+='<br>';
-    if(dp>0){
-      html+='Bayar: Rp <span class="ef">'+fmtN(bet)+'</span> &minus; Disc <span class="ef">'+fmtN(disc)+'</span> ('+discPctStr+') = Rp <span class="ef">'+fmtN(bayar)+'</span>';
-      html+='<br>';
-    }
-    html+='Rumus: Bet kembali + Bayar '+keiSign+'Kei';
-    html+=' = Rp <span class="ef">'+fmtN(bet)+'</span> + Rp <span class="ef">'+fmtN(bayar)+'</span>';
-    html+=' <span class="'+(keiAmt>=0?'ev':'ek')+'">'+keiSign+'Rp '+fmtN(Math.abs(keiAmt))+'</span>';
-    html+=' = <span class="ev">Rp '+fmtN(menang)+'</span>';
-    html+='<br>Profit bersih: <span class="'+(menang-bayar>=0?'ev':'ek')+'">'+(menang-bayar>=0?'+':'')+' Rp '+fmtN(menang-bayar)+'</span>';
-  }
-  html+='</div>';
-  return html;
 }
 
 // ═══════════════════════════════════════════════════════════════
