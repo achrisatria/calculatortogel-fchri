@@ -1536,7 +1536,7 @@ function buatJawabanCS(r,pas,res,pasLbl){
     t+='- Bayar (modal) : Rp '+fmtN(r.bayar)+'\n';
     t+='- Kerugian : -Rp '+fmtN(r.bayar)+'\n';
     if(r.nearMiss){
-      t+='\nCatatan: nomor bosku memang muncul di '+r.nearMiss+' ('+r.nearVal+'), namun semua jenis taruhan full / diskon / bolak-balik hanya berpatokan pada Prize 1. Jika ingin nomor dihitung ke Prize 1, 2, dan 3 sekaligus, silakan gunakan jenis taruhan "Prize" — hadiahnya otomatis menyesuaikan baris yang kena.\n';
+      t+='\nNote : Berikut untuk jenis bettingan/taruhan selain PRIZE maka untuk patokan result dari pasaran tersebut adalah 4 angka pertama ya bosku. Nomor anda memang muncul di '+r.nearMiss+' ('+r.nearVal+'), namun karena patokannya hanya 4 angka pertama (Prize 1), maka dinyatakan tidak menang. Apabila ingin dihitung ke Prize 1, 2, dan 3 sekaligus, silakan gunakan jenis taruhan PRIZE ya bosku.\n';
     }
     t+='\nSemangat ya bosku, semoga next round lebih beruntung.';
   }
