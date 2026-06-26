@@ -593,7 +593,10 @@ const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 // tidak pernah melebihi nilai eksaknya. Konsisten, dapat diprediksi, auditable.
 // Noise floating-point dibersihkan dulu (presisi 6 desimal) supaya nilai yang
 // sebenarnya bulat (mis. 294.9999999996 dari 1000x0.295) TIDAK turun ke 294.
-const bulatUang = v => Math.floor(Math.round(v*1e6)/1e6);
+// Nilai uang ditampilkan APA ADANYA termasuk desimal (tanpa pembulatan).
+// Hanya membersihkan noise floating-point (mis. 66.50000000001 -> 66.5)
+// hingga 6 desimal; nilai desimal asli (66.5, 33.5, dst) dipertahankan utuh.
+const bulatUang = v => Math.round(v*1e6)/1e6;
 
 // ── FITUR FOTO BACKGROUND (murni kosmetik — tidak menyentuh logika) ──
 // Pengguna mengunggah foto sebagai background, dengan kontrol:
@@ -1321,7 +1324,7 @@ const tcase=s=>String(s).toLowerCase().replace(/(^|[\s(/&-])([a-z])/g,(m,a,b)=>a
 const rapiNom=s=>{const x=String(s);return /[A-Za-z]/.test(x)?tcase(x.replace(/_/g,' ').replace(/@/g,' & ')):x;};
 
 function buatJawabanCS(r,pas,res,pasLbl){
-  const fmtN=n=>bulatUang(n).toLocaleString('id-ID');
+  const fmtN=n=>bulatUang(n).toLocaleString('id-ID',{maximumFractionDigits:4});
   const j=r.kode||'', nom=r.nomRaw||'', pos=r.posRaw||'';
   // FIX #5: terjemahkan kode ukuran (2D/3D/4D/5D/2DDP/2DTG) ke istilah ramah
   // agar tidak muncul kode mentah di tengah teks jawaban member.
@@ -2310,7 +2313,7 @@ function aturLipatAwalSeksi(){
 // ═══════════════════════════════════════════════════════════════
 // FORMAT + CLOCK + INIT
 // ═══════════════════════════════════════════════════════════════
-const fmt    = n => bulatUang(n).toLocaleString('id-ID');
+const fmt    = n => bulatUang(n).toLocaleString('id-ID',{maximumFractionDigits:4});
 const fmtPct = d => { const s=(+(d*100).toFixed(1)).toString(); return(s.endsWith('.0')?s.slice(0,-2):s)+'%'; };
 const updClk = () => document.getElementById("clk").textContent=new Date().toLocaleTimeString('id-ID');
 
